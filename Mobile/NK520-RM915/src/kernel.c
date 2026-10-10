@@ -10,6 +10,7 @@
 #include <noos/pmm.h>
 #include <noos/selftest.h>
 #include <noos/status.h>
+#include <noos/uartdm.h>
 
 static const char *boot_protocol_name(enum noos_boot_protocol protocol)
 {
@@ -270,6 +271,7 @@ void kernel_main(uint32_t boot_r0, uint32_t machine_type, uint32_t boot_data)
 
     log_allocator_state();
     diagnostic_capture_pmm(pmm_get_stats());
+    diagnostic_capture_uart(uartdm_get_stats());
     console_write("kernel bring-up milestone complete; entering idle\n");
     boot_status_set(NOOS_STAGE_READY, console_buffer_length());
     diagnostic_capture_console();

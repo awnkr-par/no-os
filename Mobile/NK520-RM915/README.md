@@ -13,16 +13,18 @@ The RM-915 target now has:
 - preserved ARM32 `r0`/`r1`/`r2` bootloader handoff;
 - automatic detection of legacy ATAGS **or** DTB in `r2`;
 - bounded ATAG parsing with multiple `ATAG_MEM` banks;
-- bounded FDT parsing for RAM, `/chosen/bootargs`, and `simple-framebuffer`;
+- bounded FDT parsing for RAM, `/chosen/bootargs`, `simple-framebuffer`, memreserve entries, `/reserved-memory`, and initrd ranges;
 - a bootloader-framebuffer proof-of-life renderer;
 - a 4 KiB in-memory early console;
 - persistent panic/fault diagnostics;
 - boot-stage breadcrumbs with a `NOOS` magic value;
 - a 4 KiB-page bitmap physical memory manager;
-- permanent reservation protection for kernel, boot-data, and framebuffer memory;
+- permanent reservation protection for kernel, full boot-data blobs, framebuffer, initrd, DTB memreserve entries, and `/reserved-memory`;
 - page allocation and page freeing;
 - a small page-backed, 8-byte-aligned kernel heap;
-- boot-time memory/allocator self-tests;
+- boot-time memory/allocator self-tests including double-free and reservation protection;
+- a dedicated checksummed `.noos_diag` crash/boot record with a host-side decoder;
+- a 16 KiB-aligned ARMv7 L1 translation table builder that validates identity mappings without enabling the MMU;
 - raw ELF/BIN and legacy Android `boot.img` outputs;
 - boot-image verification tooling;
 - GitHub Actions checks for ARM architecture, entrypoint, core symbols, artifact validity, and disassembly generation.
@@ -100,6 +102,8 @@ The first-phone test should therefore prefer lk2nd's simple-framebuffer DTB hand
 - `docs/CHAINLOAD.md` — intended temporary lk2nd/Fastboot test path
 - `docs/DISPLAY.md` — simple-framebuffer proof-of-life output
 - `docs/STATUS.md` — in-memory boot-stage breadcrumbs
+- `docs/DIAGNOSTICS.md` — persistent diagnostic record + decoder
+- `docs/MMU.md` — dry-run ARMv7 translation-table planning
 - `docs/MEMORY.md` — RAM map, bitmap PMM, and heap
 - `docs/EXCEPTIONS.md` — ARM exception stacks and crash capture
 - `docs/HARDWARE.md` — verified hardware facts and safety boundary

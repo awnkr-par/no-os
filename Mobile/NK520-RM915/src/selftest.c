@@ -5,6 +5,7 @@
 #include <noos/pmm.h>
 #include <noos/selftest.h>
 #include <noos/uartdm.h>
+#include <noos/timer.h>
 
 static void record(struct selftest_result *result, bool ok, const char *name)
 {
@@ -107,6 +108,13 @@ struct selftest_result selftest_run(const struct noos_boot_info *boot)
            mmu_descriptor_is_device(mmu_l1_descriptor(0x00900000u)) &&
            mmu_descriptor_is_device(mmu_l1_descriptor(0x16400000u)),
            "RM915 UART MMIO device mappings");
+
+    record(&result, rm915_timer_validate_plan(),
+           "RM915 timer/GIC constant plan");
+
+    record(&result,
+           mmu_descriptor_is_device(mmu_l1_descriptor(0x02000000u)),
+           "RM915 timer/GIC MMIO device mapping");
 
     return result;
 }

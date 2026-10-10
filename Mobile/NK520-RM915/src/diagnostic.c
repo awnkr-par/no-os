@@ -183,6 +183,20 @@ void diagnostic_capture_scheduler(const struct scheduler_stats *scheduler)
     refresh_checksum();
 }
 
+void diagnostic_capture_irq(const struct irq_stats *irq)
+{
+    if (irq == 0) {
+        return;
+    }
+
+    g_diag.irq_registered = irq->registered;
+    g_diag.irq_dispatches = irq->dispatches;
+    g_diag.irq_handled = irq->handled;
+    g_diag.irq_spurious = irq->spurious;
+    g_diag.irq_last = irq->last_irq;
+    refresh_checksum();
+}
+
 void diagnostic_capture_panic(const char *reason)
 {
     copy_string((char *)g_diag.panic_reason, sizeof(g_diag.panic_reason), reason);

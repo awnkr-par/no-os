@@ -29,6 +29,7 @@ OBJECTS := \
 	$(BUILD)/src/kernel.o \
 	$(BUILD)/src/boot.o \
 	$(BUILD)/src/console.o \
+	$(BUILD)/src/cpu.o \
 	$(BUILD)/src/exception.o \
 	$(BUILD)/src/heap.o \
 	$(BUILD)/src/memory.o \

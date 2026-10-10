@@ -86,11 +86,20 @@ static void test_scheduler(void)
 
     require(scheduler_sleep_until((uint32_t)b, 2u), "sleep task");
     scheduler_tick();
+    require(scheduler_reschedule_pending(), "tick requests reschedule");
     require(scheduler_task((uint32_t)b)->state == NOOS_TASK_SLEEPING,
             "task remains asleep before deadline");
+    scheduler_clear_reschedule();
     scheduler_tick();
+    require(scheduler_reschedule_pending(), "second tick requests reschedule");
     require(scheduler_task((uint32_t)b)->state == NOOS_TASK_READY,
             "task wakes at deadline");
+
+    const uint32_t switches_before = scheduler_get_stats()->context_switches;
+    scheduler_note_context_switch();
+    require(!scheduler_reschedule_pending(), "context switch clears reschedule");
+    require(scheduler_get_stats()->context_switches == switches_before + 1u,
+            "context switch accounting");
 
     require(scheduler_set_state((uint32_t)c, NOOS_TASK_DEAD), "kill task");
     require(scheduler_get_stats()->task_count == 2u, "dead task count");

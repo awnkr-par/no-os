@@ -23,3 +23,14 @@ noos.splash=1 noos.selftest=1 noos.mmu-plan=0 noos.loglevel=4
 ```
 
 The parser is deliberately allocation-free and does not depend on compiler integer-division helpers.
+
+
+## Build-time composition
+
+The Makefile keeps bootloader options and noOS options separate:
+
+- `LK2ND_CMDLINE` — lk2nd-specific flags such as simplefb/autorefresh.
+- `NOOS_CMDLINE` — noOS runtime options.
+- `BOOT_CMDLINE` — automatically composed from both.
+
+This makes hardware experiments less error-prone because changing an lk2nd framebuffer flag does not accidentally remove noOS safety/test flags.

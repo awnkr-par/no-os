@@ -1,6 +1,7 @@
 #ifndef NOOS_SELFTEST_H
 #define NOOS_SELFTEST_H
 
+#include <noos/boot.h>
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -9,7 +10,7 @@ struct selftest_result {
     uint32_t failed;
 };
 
-struct selftest_result selftest_run(void);
+struct selftest_result selftest_run(const struct noos_boot_info *boot);
 bool selftest_ok(struct selftest_result result);
 
 #endif

@@ -6,8 +6,8 @@ import struct
 from pathlib import Path
 
 MAGIC = 0x4E444941
-VERSION = 3
-UINT_COUNT = 34
+VERSION = 4
+UINT_COUNT = 45
 PANIC_BYTES = 64
 LOG_BYTES = 256
 STRUCT_FORMAT = "<" + ("I" * UINT_COUNT) + f"{PANIC_BYTES}s{LOG_BYTES}s"
@@ -18,6 +18,7 @@ FIELDS = [
     "stage", "detail",
     "boot_protocol", "boot_data_address", "boot_data_size",
     "total_memory_bytes", "reserved_range_count",
+    "boot_option_flags", "boot_log_level",
     "cpu_midr", "cpu_cpsr", "cpu_sctlr",
     "pmm_total_pages", "pmm_free_pages", "pmm_permanent_pages",
     "pmm_allocated_pages",
@@ -27,6 +28,9 @@ FIELDS = [
     "framebuffer_address", "framebuffer_width", "framebuffer_height",
     "framebuffer_stride", "framebuffer_format",
     "selftests_passed", "selftests_failed",
+    "klog_bytes_written", "klog_bytes_overwritten", "klog_wraps", "klog_length",
+    "scheduler_ticks", "scheduler_tasks", "scheduler_ready",
+    "scheduler_sleeping", "scheduler_switches_planned",
 ]
 
 STAGES = {
@@ -107,6 +111,13 @@ def print_record(v: dict[str, int | str]) -> None:
     print(f"boot data:      0x{int(v['boot_data_address']):08X} + 0x{int(v['boot_data_size']):X}")
     print(f"RAM bytes:      0x{int(v['total_memory_bytes']):08X}")
     print(f"reserved ranges:{v['reserved_range_count']}")
+    flags = int(v["boot_option_flags"])
+    print(
+        "boot options:   "
+        f"splash={bool(flags & 1)} selftest={bool(flags & 2)} "
+        f"mmu-plan={bool(flags & 4)} sched-test={bool(flags & 8)} "
+        f"loglevel={v['boot_log_level']}"
+    )
     print(f"CPU MIDR:       0x{int(v['cpu_midr']):08X}")
     print(f"CPU CPSR:       0x{int(v['cpu_cpsr']):08X}")
     print(f"CPU SCTLR:      0x{int(v['cpu_sctlr']):08X}")
@@ -140,6 +151,18 @@ def print_record(v: dict[str, int | str]) -> None:
         f"selftests:      pass={v['selftests_passed']} "
         f"fail={v['selftests_failed']}"
     )
+    print(
+        "klog:           "
+        f"written={v['klog_bytes_written']} "
+        f"overwritten={v['klog_bytes_overwritten']} "
+        f"wraps={v['klog_wraps']} retained={v['klog_length']}"
+    )
+    print(
+        "scheduler:      "
+        f"ticks={v['scheduler_ticks']} tasks={v['scheduler_tasks']} "
+        f"ready={v['scheduler_ready']} sleeping={v['scheduler_sleeping']} "
+        f"planned={v['scheduler_switches_planned']}"
+    )
     print(f"panic reason:   {v['panic_reason'] or '(none)'}")
     print("--- log tail ---")
     print(v["log_tail"] or "(empty)")
@@ -153,15 +176,27 @@ def make_selftest_record() -> bytes:
     ints[4] = 8
     ints[6] = 2
     ints[9] = 0x20000000
-    ints[14] = 131072
-    ints[15] = 120000
-    ints[18] = 0x80210000
-    ints[19] = 512
-    ints[22] = 1
-    ints[32] = 8
+    ints[11] = 0xF
+    ints[12] = 4
+    ints[16] = 131072
+    ints[17] = 120000
+    ints[20] = 0x80210000
+    ints[21] = 512
+    ints[24] = 1
+    ints[34] = 12
+    ints[35] = 0
+    ints[36] = 9000
+    ints[37] = 808
+    ints[38] = 2
+    ints[39] = 8192
+    ints[40] = 2
+    ints[41] = 2
+    ints[42] = 1
+    ints[43] = 1
+    ints[44] = 4
 
     panic = b"".ljust(PANIC_BYTES, b"\0")
-    log = b"decoder selftest".ljust(LOG_BYTES, b"\0")
+    log = b"decoder v4 selftest".ljust(LOG_BYTES, b"\0")
     raw = bytearray(struct.pack(STRUCT_FORMAT, *ints, panic, log))
     checksum = fnv1a_without_checksum(raw)
     struct.pack_into("<I", raw, 12, checksum)
@@ -182,8 +217,11 @@ def main() -> None:
         assert values["checksum"] == values["computed_checksum"]
         assert values["stage"] == 8
         assert values["boot_protocol"] == 2
-        assert values["selftests_passed"] == 8
-        print("diagnostic decoder selftest: OK")
+        assert values["selftests_passed"] == 12
+        assert values["boot_option_flags"] == 0xF
+        assert values["klog_wraps"] == 2
+        assert values["scheduler_tasks"] == 2
+        print("diagnostic decoder v4 selftest: OK")
         return
 
     if args.dump is None:

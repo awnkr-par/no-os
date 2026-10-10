@@ -110,11 +110,11 @@ vector_reserved:
 .align 2
 vector_irq:
     stmdb sp!, {r0-r12, lr}
-    mrs r1, spsr
-    mov r2, sp
-    mov r0, #6
-    bl exception_handle
-    b exception_dead
+    mrs r0, spsr
+    mov r1, sp
+    bl exception_irq_handle
+    ldmia sp!, {r0-r12, lr}
+    subs pc, lr, #4
 
 .align 2
 vector_fiq:

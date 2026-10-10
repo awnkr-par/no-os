@@ -35,7 +35,7 @@ bool qgic_init(void)
 
     const uint32_t typer = mmio_read32(NOOS_RM915_GIC_DIST_BASE + GIC_DIST_CTR);
     g_irq_lines = ((typer & 0x1Fu) + 1u) * 32u;
-    if (g_irq_lines < 32u || g_irq_lines > 1020u) {
+    if (g_irq_lines < 32u || g_irq_lines > 1024u) {
         return false;
     }
 
@@ -83,7 +83,7 @@ bool qgic_enable_irq(uint32_t irq, bool edge_rising)
         GIC_DIST_CONFIG + (irq / 16u) * 4u;
     const uint32_t shift = (irq & 15u) * 2u;
     uint32_t config = mmio_read32(config_reg);
-    config &= ~(2u << shift);
+    config &= ~(3u << shift);
     if (edge_rising) {
         config |= 2u << shift;
     }
@@ -97,6 +97,8 @@ bool qgic_enable_irq(uint32_t irq, bool edge_rising)
     pri |= 0xA0u << pri_shift;
     mmio_write32(pri_reg, pri);
 
+    mmio_write32(NOOS_RM915_GIC_DIST_BASE + GIC_DIST_PENDING_CLEAR +
+                 (irq / 32u) * 4u, bit);
     mmio_write32(enable_set, bit);
     barrier();
     return true;

@@ -31,6 +31,8 @@ struct scheduler_stats {
     uint32_t ready_count;
     uint32_t sleeping_count;
     uint32_t switches_planned;
+    uint32_t reschedule_requests;
+    uint32_t context_switches;
 };
 
 void scheduler_init(void);
@@ -39,6 +41,10 @@ bool scheduler_set_state(uint32_t id, enum noos_task_state state);
 bool scheduler_sleep_until(uint32_t id, uint32_t wake_tick);
 void scheduler_tick(void);
 int32_t scheduler_pick_next(void);
+void scheduler_request_reschedule(void);
+bool scheduler_reschedule_pending(void);
+void scheduler_clear_reschedule(void);
+void scheduler_note_context_switch(void);
 const struct noos_task *scheduler_task(uint32_t id);
 const struct scheduler_stats *scheduler_get_stats(void);
 

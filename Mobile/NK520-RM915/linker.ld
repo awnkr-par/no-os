@@ -39,11 +39,13 @@ SECTIONS
         __bss_end = .;
     }
 
-    /*
-     * Deliberately outside .bss so startup clearing does not erase the block
-     * before C explicitly initializes it. This also gives debuggers a stable
-     * linker symbol and section to locate after a failed boot.
-     */
+    .mmu_tables ALIGN(16K) (NOLOAD) :
+    {
+        __mmu_l1_start = .;
+        KEEP(*(.mmu_tables))
+        __mmu_l1_end = .;
+    }
+
     .noos_diag ALIGN(64) (NOLOAD) :
     {
         __diag_start = .;

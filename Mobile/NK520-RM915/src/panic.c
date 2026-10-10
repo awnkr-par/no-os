@@ -1,4 +1,7 @@
+#include <noos/console.h>
 #include <noos/panic.h>
+
+static const char *g_panic_reason;
 
 _Noreturn void halt_forever(void)
 {
@@ -7,10 +10,18 @@ _Noreturn void halt_forever(void)
     }
 }
 
+const char *panic_reason(void)
+{
+    return g_panic_reason;
+}
+
 _Noreturn void panic(const char *reason)
 {
-    (void)reason;
+    g_panic_reason = reason;
 
-    /* A diagnostic backend will consume this once UART/display is verified. */
+    console_write("PANIC: ");
+    console_write(reason != 0 ? reason : "(no reason)");
+    console_write("\n");
+
     halt_forever();
 }

@@ -1,10 +1,31 @@
 #include <noos/boot.h>
 #include <noos/console.h>
+#include <noos/cpu.h>
 #include <noos/heap.h>
 #include <noos/panic.h>
 #include <noos/platform.h>
 #include <noos/pmm.h>
 #include <noos/selftest.h>
+
+static void log_cpu_state(void)
+{
+    struct cpu_state state;
+    cpu_read_state(&state);
+
+    console_write("CPU MIDR: ");
+    console_write_hex32(state.midr);
+    console_write("\nCPSR: ");
+    console_write_hex32(state.cpsr);
+    console_write("\nSCTLR: ");
+    console_write_hex32(state.sctlr);
+    console_write(" MMU=");
+    console_write(cpu_mmu_enabled(&state) ? "on" : "off");
+    console_write(" D-cache=");
+    console_write(cpu_dcache_enabled(&state) ? "on" : "off");
+    console_write(" I-cache=");
+    console_write(cpu_icache_enabled(&state) ? "on" : "off");
+    console_write("\n");
+}
 
 static void log_memory_map(const struct noos_boot_info *info)
 {
@@ -34,7 +55,9 @@ static void log_boot_info(const struct noos_boot_info *info)
     console_write("\nnoOS RM-915\n");
     console_write("platform: ");
     console_write(platform_name());
-    console_write("\nboot r0: ");
+    console_write("\n");
+    log_cpu_state();
+    console_write("boot r0: ");
     console_write_hex32(info->boot_r0);
     console_write("\nmachine: ");
     console_write_hex32(info->machine_type);

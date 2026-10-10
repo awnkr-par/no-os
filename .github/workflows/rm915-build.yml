@@ -54,13 +54,19 @@ jobs:
           arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]framebuffer_show_boot_splash$"
           arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]boot_status_set$"
           arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]diagnostic_get$"
+          arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]mmu_prepare_identity$"
+          arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]mmu_validate_identity$"
+          arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]__mmu_l1_start$"
+          arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]__mmu_l1_end$"
           arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]__diag_start$"
           arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]__diag_end$"
 
-      - name: Verify diagnostic section
+      - name: Verify diagnostic and MMU sections
         run: |
           arm-none-eabi-objdump -h build/noos.elf | grep -q ".noos_diag"
           arm-none-eabi-readelf -S build/noos.elf | grep -q ".noos_diag"
+          arm-none-eabi-objdump -h build/noos.elf | grep -q ".mmu_tables"
+          arm-none-eabi-readelf -S build/noos.elf | grep -q ".mmu_tables"
 
       - name: Inspect artifacts
         run: |

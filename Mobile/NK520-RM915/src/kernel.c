@@ -1,11 +1,32 @@
 #include <noos/boot.h>
 #include <noos/console.h>
 #include <noos/cpu.h>
+#include <noos/framebuffer.h>
 #include <noos/heap.h>
 #include <noos/panic.h>
 #include <noos/platform.h>
 #include <noos/pmm.h>
 #include <noos/selftest.h>
+#include <noos/status.h>
+
+static const char *boot_protocol_name(enum noos_boot_protocol protocol)
+{
+    switch (protocol) {
+    case NOOS_BOOT_ATAGS: return "ATAGS";
+    case NOOS_BOOT_DTB: return "DTB";
+    default: return "unknown";
+    }
+}
+
+static const char *pixel_format_name(enum noos_pixel_format format)
+{
+    switch (format) {
+    case NOOS_PIXEL_XRGB8888: return "xrgb8888";
+    case NOOS_PIXEL_ARGB8888: return "argb8888";
+    case NOOS_PIXEL_RGB565: return "rgb565";
+    default: return "unknown";
+    }
+}
 
 static void log_cpu_state(void)
 {
@@ -46,8 +67,28 @@ static void log_memory_map(const struct noos_boot_info *info)
     }
 
     if (info->memory_truncated) {
-        console_write("WARNING: ATAG memory bank list truncated\n");
+        console_write("WARNING: boot memory bank list truncated\n");
     }
+}
+
+static void log_framebuffer(const struct noos_boot_info *info)
+{
+    if (!info->framebuffer.valid) {
+        console_write("framebuffer: not supplied\n");
+        return;
+    }
+
+    console_write("framebuffer: ");
+    console_write_hex32(info->framebuffer.address);
+    console_write(" ");
+    console_write_dec32(info->framebuffer.width);
+    console_write("x");
+    console_write_dec32(info->framebuffer.height);
+    console_write(" stride=");
+    console_write_dec32(info->framebuffer.stride);
+    console_write(" format=");
+    console_write(pixel_format_name(info->framebuffer.format));
+    console_write("\n");
 }
 
 static void log_boot_info(const struct noos_boot_info *info)
@@ -57,17 +98,21 @@ static void log_boot_info(const struct noos_boot_info *info)
     console_write(platform_name());
     console_write("\n");
     log_cpu_state();
-    console_write("boot r0: ");
+
+    console_write("boot protocol: ");
+    console_write(boot_protocol_name(info->protocol));
+    console_write("\nboot r0: ");
     console_write_hex32(info->boot_r0);
     console_write("\nmachine: ");
     console_write_hex32(info->machine_type);
     console_write("\nboot data: ");
-    console_write_hex32(info->tags_address);
-    console_write("\nATAGS: ");
-    console_write(info->atags_valid ? "valid" : "not detected");
+    console_write_hex32(info->boot_data_address);
+    console_write("\nboot data valid: ");
+    console_write(info->boot_data_valid ? "yes" : "no");
     console_write("\n");
 
     log_memory_map(info);
+    log_framebuffer(info);
 
     if (info->command_line != 0) {
         console_write("cmdline: ");
@@ -107,22 +152,35 @@ void kernel_main(uint32_t boot_r0, uint32_t machine_type, uint32_t boot_data)
     struct noos_boot_info info;
 
     console_init();
+    boot_status_init();
     platform_early_init();
+
     boot_info_init(&info, boot_r0, machine_type, boot_data);
+    boot_status_set(NOOS_STAGE_BOOT_INFO, (uint32_t)info.protocol);
+
+    const bool have_framebuffer = framebuffer_init(&info.framebuffer);
+    if (have_framebuffer) {
+        framebuffer_show_boot_splash(true);
+    }
+
     log_boot_info(&info);
 
-    if (!info.atags_valid || info.memory_bank_count == 0) {
+    if (!info.boot_data_valid || info.memory_bank_count == 0) {
         panic("no usable RAM map from bootloader");
     }
 
     if (!pmm_init(&info)) {
         panic("physical memory manager initialization failed");
     }
+    boot_status_set(NOOS_STAGE_MEMORY, pmm_get_stats()->free_pages);
 
     heap_init();
+    boot_status_set(NOOS_STAGE_HEAP, 0);
     log_allocator_state();
 
     const struct selftest_result tests = selftest_run();
+    boot_status_set(NOOS_STAGE_SELFTEST, tests.failed);
+
     console_write("selftests passed/failed: ");
     console_write_dec32(tests.passed);
     console_write("/");
@@ -133,7 +191,12 @@ void kernel_main(uint32_t boot_r0, uint32_t machine_type, uint32_t boot_data)
         panic("kernel self-test failed");
     }
 
+    if (have_framebuffer) {
+        framebuffer_show_boot_splash(true);
+    }
+
     log_allocator_state();
+    boot_status_set(NOOS_STAGE_READY, console_buffer_length());
     console_write("kernel bring-up milestone complete; entering idle\n");
 
     platform_idle();

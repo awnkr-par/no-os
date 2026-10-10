@@ -7,10 +7,6 @@ ENTRY(_start)
  *   kernel offset 0x00008000
  *   kernel load   0x80208000
  *   tags offset   0x00000100 -> 0x80200100
- *
- * This is the verified legacy Android/LK-style handoff layout used by the
- * existing Fame Linux port. It is not proof that every SBL3 chain path uses
- * the same address, so direct-SBL3 experiments should still inspect r2/ATAGS.
  */
 KERNEL_LOAD = 0x80208000;
 
@@ -50,11 +46,32 @@ SECTIONS
         __bss_end = .;
     }
 
-    .stack ALIGN(16) (NOLOAD) :
+    /*
+     * ARM exception modes have banked stack pointers. Keep dedicated stacks
+     * so a fault cannot trample the normal SVC/kernel stack while we capture
+     * diagnostics.
+     */
+    .stacks ALIGN(16) (NOLOAD) :
     {
-        __stack_bottom = .;
+        __svc_stack_bottom = .;
         . += 16K;
-        __stack_top = .;
+        __svc_stack_top = .;
+
+        __irq_stack_bottom = .;
+        . += 4K;
+        __irq_stack_top = .;
+
+        __fiq_stack_bottom = .;
+        . += 4K;
+        __fiq_stack_top = .;
+
+        __abt_stack_bottom = .;
+        . += 4K;
+        __abt_stack_top = .;
+
+        __und_stack_bottom = .;
+        . += 4K;
+        __und_stack_top = .;
     }
 
     __image_end = .;

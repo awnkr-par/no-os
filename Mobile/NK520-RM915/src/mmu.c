@@ -12,6 +12,7 @@
 #define RM915_TLMM_SECTION      0x00800000u
 #define RM915_CLK_SECTION       0x00900000u
 #define RM915_GSBI5_SECTION     0x16400000u
+#define RM915_TIMER_GIC_SECTION 0x02000000u
 
 __attribute__((section(".mmu_tables"), used, aligned(16384)))
 static uint32_t g_l1_table[NOOS_MMU_L1_ENTRIES];
@@ -156,6 +157,7 @@ bool mmu_prepare_identity(const struct noos_boot_info *boot)
     map_device_section(RM915_TLMM_SECTION);
     map_device_section(RM915_CLK_SECTION);
     map_device_section(RM915_GSBI5_SECTION);
+    map_device_section(RM915_TIMER_GIC_SECTION);
 
     g_stats.prepared = g_stats.mapped_sections != 0;
     if (!g_stats.prepared) {
@@ -195,7 +197,8 @@ bool mmu_validate_identity(const struct noos_boot_info *boot)
 
     return validate_device_section(RM915_TLMM_SECTION) &&
            validate_device_section(RM915_CLK_SECTION) &&
-           validate_device_section(RM915_GSBI5_SECTION);
+           validate_device_section(RM915_GSBI5_SECTION) &&
+           validate_device_section(RM915_TIMER_GIC_SECTION);
 }
 
 uint32_t mmu_l1_descriptor(uint32_t virtual_address)

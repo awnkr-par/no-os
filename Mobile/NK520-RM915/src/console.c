@@ -1,4 +1,5 @@
 #include <noos/console.h>
+#include <noos/klog.h>
 
 #define EARLY_LOG_CAPACITY 4096u
 
@@ -28,6 +29,7 @@ void console_init(void)
     g_early_log_length = 0;
     g_early_log[0] = '\0';
     g_sink = 0;
+    klog_init();
 }
 
 void console_set_sink(console_sink_fn sink)
@@ -41,6 +43,8 @@ void console_putc(char c)
         g_early_log[g_early_log_length++] = c;
         g_early_log[g_early_log_length] = '\0';
     }
+
+    klog_putc(c);
 
     if (g_sink != 0) {
         g_sink(c);
@@ -87,6 +91,61 @@ void console_write_dec32(uint32_t value)
     while (length != 0) {
         console_putc(buffer[--length]);
     }
+}
+
+void console_vprintf(const char *format, va_list args)
+{
+    if (format == 0) {
+        return;
+    }
+
+    for (const char *p = format; *p != '\0'; ++p) {
+        if (*p != '%') {
+            console_putc(*p);
+            continue;
+        }
+
+        ++p;
+        if (*p == '\0') {
+            console_putc('%');
+            break;
+        }
+
+        switch (*p) {
+        case '%':
+            console_putc('%');
+            break;
+        case 'c':
+            console_putc((char)va_arg(args, int));
+            break;
+        case 's': {
+            const char *text = va_arg(args, const char *);
+            console_write(text != 0 ? text : "(null)");
+            break;
+        }
+        case 'u':
+            console_write_dec32(va_arg(args, uint32_t));
+            break;
+        case 'x':
+            console_write_hex32(va_arg(args, uint32_t));
+            break;
+        case 'p':
+            console_write_hex32((uint32_t)(uintptr_t)va_arg(args, void *));
+            break;
+        default:
+            console_putc('%');
+            console_putc(*p);
+            break;
+        }
+    }
+}
+
+void console_printf(const char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    console_vprintf(format, args);
+    va_end(args);
 }
 
 const char *console_buffer(void)

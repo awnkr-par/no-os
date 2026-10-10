@@ -54,6 +54,8 @@ jobs:
           arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]console_printf$"
           arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]klog_snapshot$"
           arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]scheduler_pick_next$"
+          arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]irq_register$"
+          arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]irq_dispatch$"
           arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]fdt_parse_boot_info$"
           arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]framebuffer_show_boot_splash$"
           arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]boot_status_set$"

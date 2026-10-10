@@ -181,6 +181,8 @@ void diagnostic_capture_scheduler(const struct scheduler_stats *scheduler)
     g_diag.scheduler_ready = scheduler->ready_count;
     g_diag.scheduler_sleeping = scheduler->sleeping_count;
     g_diag.scheduler_switches_planned = scheduler->switches_planned;
+    g_diag.scheduler_reschedule_requests = scheduler->reschedule_requests;
+    g_diag.scheduler_context_switches = scheduler->context_switches;
     refresh_checksum();
 }
 

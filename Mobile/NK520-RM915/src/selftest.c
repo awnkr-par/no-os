@@ -138,13 +138,14 @@ struct selftest_result selftest_run(const struct noos_boot_info *boot,
     record(&result, unaligned_size != 0 &&
            (((uintptr_t)unaligned_size & 7u) == 0), "heap alignment");
 
-    struct noos_boot_options options;
-    bootargs_parse(&options,
+    struct noos_boot_options parsed_options;
+    bootargs_parse(&parsed_options,
                    "noos.splash=0 noos.selftest=yes noos.mmu-plan=off "
                    "noos.sched-test=1 noos.loglevel=0x4");
     record(&result,
-           !options.splash && options.selftest && !options.mmu_plan &&
-           options.scheduler_test && options.log_level == 4u,
+           !parsed_options.splash && parsed_options.selftest &&
+           !parsed_options.mmu_plan && parsed_options.scheduler_test &&
+           parsed_options.log_level == 4u,
            "boot option parsing");
 
     if (options == 0 || options->scheduler_test) {

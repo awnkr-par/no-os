@@ -46,6 +46,7 @@ OBJECTS := \
 	$(BUILD)/src/selftest.o \
 	$(BUILD)/src/status.o \
 	$(BUILD)/drivers/uart/uartdm.o \
+	$(BUILD)/drivers/timer/msm8960_timer.o \
 	$(BUILD)/platform/rm915/platform.o
 
 .PHONY: all clean disasm size check-toolchain bootimg verify manifest

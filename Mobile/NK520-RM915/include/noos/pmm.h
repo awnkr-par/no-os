@@ -14,7 +14,8 @@ struct pmm_stats {
     uint32_t total_pages;
     uint32_t usable_pages;
     uint32_t free_pages;
-    uint32_t reserved_pages;
+    uint32_t permanent_pages;
+    uint32_t allocated_pages;
     uint32_t allocation_hint;
 };
 

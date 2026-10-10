@@ -16,6 +16,9 @@ The RM-915 target now has:
 - bounded FDT parsing for RAM, `/chosen/bootargs`, `simple-framebuffer`, memreserve entries, `/reserved-memory`, and initrd ranges;
 - a bootloader-framebuffer proof-of-life renderer;
 - a 4 KiB in-memory early console;
+- an 8 KiB circular kernel log with overwrite/wrap statistics;
+- a freestanding `console_printf()` implementation;
+- a `noos.*` boot-option parser for splash/selftest/MMU/scheduler-test control;
 - persistent panic/fault diagnostics;
 - boot-stage breadcrumbs with a `NOOS` magic value;
 - a 4 KiB-page bitmap physical memory manager;

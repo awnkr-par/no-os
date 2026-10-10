@@ -132,6 +132,20 @@ void diagnostic_capture_mmu(const struct mmu_stats *mmu)
     refresh_checksum();
 }
 
+void diagnostic_capture_uart(const struct uartdm_stats *uart)
+{
+    if (uart == 0) {
+        return;
+    }
+
+    g_diag.uart_base = uart->base;
+    g_diag.uart_bytes_sent = uart->bytes_sent;
+    g_diag.uart_tx_timeouts = uart->tx_timeouts;
+    g_diag.uart_flags = (uart->adopted ? 1u : 0u) |
+                        (uart->healthy ? 2u : 0u);
+    refresh_checksum();
+}
+
 void diagnostic_capture_selftest(struct selftest_result result)
 {
     g_diag.selftests_passed = result.passed;

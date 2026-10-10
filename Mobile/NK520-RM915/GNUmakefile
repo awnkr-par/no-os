@@ -37,6 +37,7 @@ OBJECTS := \
 	$(BUILD)/src/framebuffer.o \
 	$(BUILD)/src/heap.o \
 	$(BUILD)/src/memory.o \
+	$(BUILD)/src/mmu.o \
 	$(BUILD)/src/panic.o \
 	$(BUILD)/src/pmm.o \
 	$(BUILD)/src/selftest.o \

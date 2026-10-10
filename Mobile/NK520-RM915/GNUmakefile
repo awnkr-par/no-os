@@ -22,7 +22,7 @@ endif
 
 PYTHON ?= python3
 LK2ND_CMDLINE ?= lk2nd.pass-simplefb=xrgb8888
-NOOS_CMDLINE ?= noos.splash=1 noos.selftest=1 noos.mmu-plan=1 noos.sched-test=1 noos.loglevel=2
+NOOS_CMDLINE ?= noos.splash=1 noos.selftest=1 noos.mmu-plan=1 noos.sched-test=1 noos.timer-irq=0 noos.loglevel=2
 BOOT_CMDLINE := $(LK2ND_CMDLINE) $(NOOS_CMDLINE)
 UARTDM_HANDOFF ?= 0
 CPPFLAGS := -Iinclude -DNOOS_UARTDM_HANDOFF=$(UARTDM_HANDOFF)
@@ -52,6 +52,7 @@ OBJECTS := \
 	$(BUILD)/src/selftest.o \
 	$(BUILD)/src/status.o \
 	$(BUILD)/drivers/uart/uartdm.o \
+	$(BUILD)/drivers/irq/qgic.o \
 	$(BUILD)/drivers/timer/msm8960_timer.o \
 	$(BUILD)/platform/rm915/platform.o
 

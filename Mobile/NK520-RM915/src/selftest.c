@@ -37,11 +37,16 @@ struct selftest_result selftest_run(void)
 
     const struct pmm_stats before = *pmm_get_stats();
     void *page = pmm_alloc_page();
-    const struct pmm_stats after = *pmm_get_stats();
-    record(&result,
-           page != 0 && ((uintptr_t)page % NOOS_PAGE_SIZE) == 0 &&
-           after.free_pages + 1u == before.free_pages,
-           "PMM allocation");
+    const struct pmm_stats allocated = *pmm_get_stats();
+    bool page_ok = page != 0 &&
+                   ((uintptr_t)page % NOOS_PAGE_SIZE) == 0 &&
+                   allocated.free_pages + 1u == before.free_pages;
+    record(&result, page_ok, "PMM allocation");
+
+    bool free_ok = page_ok && pmm_free_page(page);
+    const struct pmm_stats freed = *pmm_get_stats();
+    free_ok = free_ok && freed.free_pages == before.free_pages;
+    record(&result, free_ok, "PMM free/reuse accounting");
 
     uint32_t *words = (uint32_t *)kcalloc(16, sizeof(uint32_t));
     bool zeroed = words != 0;
@@ -54,6 +59,10 @@ struct selftest_result selftest_run(void)
         }
     }
     record(&result, zeroed, "heap calloc");
+
+    void *unaligned_size = kmalloc(13);
+    record(&result, unaligned_size != 0 &&
+           (((uintptr_t)unaligned_size & 7u) == 0), "heap alignment");
 
     return result;
 }

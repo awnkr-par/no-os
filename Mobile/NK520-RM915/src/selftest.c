@@ -86,7 +86,8 @@ static bool scheduler_core_test(void)
     return sleeping != 0 && sleeping->state == NOOS_TASK_READY;
 }
 
-struct selftest_result selftest_run(const struct noos_boot_info *boot)
+struct selftest_result selftest_run(const struct noos_boot_info *boot,
+                                    const struct noos_boot_options *options)
 {
     struct selftest_result result = {0, 0};
 
@@ -146,7 +147,9 @@ struct selftest_result selftest_run(const struct noos_boot_info *boot)
            options.scheduler_test && options.log_level == 4u,
            "boot option parsing");
 
-    record(&result, scheduler_core_test(), "scheduler core state machine");
+    if (options == 0 || options->scheduler_test) {
+        record(&result, scheduler_core_test(), "scheduler core state machine");
+    }
 
     char log_tail[64];
     const size_t snap = klog_snapshot(log_tail, sizeof(log_tail));
@@ -156,18 +159,22 @@ struct selftest_result selftest_run(const struct noos_boot_info *boot)
     record(&result, uartdm_validate_full_init_plan(),
            "RM915 UART full-init constant plan");
 
-    record(&result,
-           mmu_descriptor_is_device(mmu_l1_descriptor(0x00800000u)) &&
-           mmu_descriptor_is_device(mmu_l1_descriptor(0x00900000u)) &&
-           mmu_descriptor_is_device(mmu_l1_descriptor(0x16400000u)),
-           "RM915 UART MMIO device mappings");
+    if (options == 0 || options->mmu_plan) {
+        record(&result,
+               mmu_descriptor_is_device(mmu_l1_descriptor(0x00800000u)) &&
+               mmu_descriptor_is_device(mmu_l1_descriptor(0x00900000u)) &&
+               mmu_descriptor_is_device(mmu_l1_descriptor(0x16400000u)),
+               "RM915 UART MMIO device mappings");
+    }
 
     record(&result, rm915_timer_validate_plan(),
            "RM915 timer/GIC constant plan");
 
-    record(&result,
-           mmu_descriptor_is_device(mmu_l1_descriptor(0x02000000u)),
-           "RM915 timer/GIC MMIO device mapping");
+    if (options == 0 || options->mmu_plan) {
+        record(&result,
+               mmu_descriptor_is_device(mmu_l1_descriptor(0x02000000u)),
+               "RM915 timer/GIC MMIO device mapping");
+    }
 
     return result;
 }

@@ -140,6 +140,7 @@ void bootargs_defaults(struct noos_boot_options *options)
     options->selftest = true;
     options->mmu_plan = true;
     options->scheduler_test = true;
+    options->timer_irq = false;
     options->log_level = 2u;
 }
 
@@ -154,5 +155,6 @@ void bootargs_parse(struct noos_boot_options *options, const char *command_line)
     options->selftest = bootargs_get_bool(command_line, "noos.selftest", options->selftest);
     options->mmu_plan = bootargs_get_bool(command_line, "noos.mmu-plan", options->mmu_plan);
     options->scheduler_test = bootargs_get_bool(command_line, "noos.sched-test", options->scheduler_test);
+    options->timer_irq = bootargs_get_bool(command_line, "noos.timer-irq", options->timer_irq);
     options->log_level = bootargs_get_u32(command_line, "noos.loglevel", options->log_level);
 }

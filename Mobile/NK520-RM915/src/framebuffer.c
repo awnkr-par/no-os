@@ -49,9 +49,11 @@ static uint8_t glyph_row(char c, uint32_t row)
     static const uint8_t blank[7] = {0,0,0,0,0,0,0};
     static const uint8_t A[7] = {14,17,17,31,17,17,17};
     static const uint8_t B[7] = {30,17,17,30,17,17,30};
+    static const uint8_t C[7] = {14,17,16,16,16,17,14};
     static const uint8_t D[7] = {30,17,17,17,17,17,30};
     static const uint8_t E[7] = {31,16,16,30,16,16,31};
     static const uint8_t F[7] = {31,16,16,30,16,16,16};
+    static const uint8_t G[7] = {14,17,16,23,17,17,15};
     static const uint8_t I[7] = {31,4,4,4,4,4,31};
     static const uint8_t L[7] = {16,16,16,16,16,16,31};
     static const uint8_t M[7] = {17,27,21,21,17,17,17};
@@ -61,9 +63,17 @@ static uint8_t glyph_row(char c, uint32_t row)
     static const uint8_t R[7] = {30,17,17,30,20,18,17};
     static const uint8_t S[7] = {15,16,16,14,1,1,30};
     static const uint8_t T[7] = {31,4,4,4,4,4,4};
+    static const uint8_t U[7] = {17,17,17,17,17,17,14};
+    static const uint8_t X[7] = {17,17,10,4,10,17,17};
     static const uint8_t zero[7] = {14,17,19,21,25,17,14};
     static const uint8_t one[7] = {4,12,4,4,4,4,14};
+    static const uint8_t two[7] = {14,17,1,2,4,8,31};
+    static const uint8_t three[7] = {30,1,1,14,1,1,30};
+    static const uint8_t four[7] = {2,6,10,18,31,2,2};
     static const uint8_t five[7] = {31,16,16,30,1,1,30};
+    static const uint8_t six[7] = {14,16,16,30,17,17,14};
+    static const uint8_t seven[7] = {31,1,2,4,8,8,8};
+    static const uint8_t eight[7] = {14,17,17,14,17,17,14};
     static const uint8_t nine[7] = {14,17,17,15,1,1,14};
     static const uint8_t dash[7] = {0,0,0,31,0,0,0};
     const uint8_t *glyph = blank;
@@ -71,9 +81,11 @@ static uint8_t glyph_row(char c, uint32_t row)
     switch (c) {
     case 'A': glyph = A; break;
     case 'B': glyph = B; break;
+    case 'C': glyph = C; break;
     case 'D': glyph = D; break;
     case 'E': glyph = E; break;
     case 'F': glyph = F; break;
+    case 'G': glyph = G; break;
     case 'I': glyph = I; break;
     case 'L': glyph = L; break;
     case 'M': glyph = M; break;
@@ -83,9 +95,17 @@ static uint8_t glyph_row(char c, uint32_t row)
     case 'R': glyph = R; break;
     case 'S': glyph = S; break;
     case 'T': glyph = T; break;
+    case 'U': glyph = U; break;
+    case 'X': glyph = X; break;
     case '0': glyph = zero; break;
     case '1': glyph = one; break;
+    case '2': glyph = two; break;
+    case '3': glyph = three; break;
+    case '4': glyph = four; break;
     case '5': glyph = five; break;
+    case '6': glyph = six; break;
+    case '7': glyph = seven; break;
+    case '8': glyph = eight; break;
     case '9': glyph = nine; break;
     case '-': glyph = dash; break;
     default: break;
@@ -129,11 +149,7 @@ bool framebuffer_available(void)
 
 void framebuffer_fill_rect(uint32_t x, uint32_t y, uint32_t width, uint32_t height, uint32_t rgb)
 {
-    if (!g_available) {
-        return;
-    }
-
-    if (x >= g_fb.width || y >= g_fb.height) {
+    if (!g_available || x >= g_fb.width || y >= g_fb.height) {
         return;
     }
 
@@ -187,6 +203,22 @@ void framebuffer_draw_text(uint32_t x, uint32_t y, const char *text, uint32_t rg
     }
 }
 
+void framebuffer_draw_hex32(uint32_t x, uint32_t y, uint32_t value, uint32_t rgb, uint32_t scale)
+{
+    static const char digits[] = "0123456789ABCDEF";
+    char text[11];
+
+    text[0] = '0';
+    text[1] = 'X';
+    for (uint32_t i = 0; i < 8; ++i) {
+        const uint32_t shift = 28u - i * 4u;
+        text[2 + i] = digits[(value >> shift) & 0xFu];
+    }
+    text[10] = '\0';
+
+    framebuffer_draw_text(x, y, text, rgb, scale);
+}
+
 void framebuffer_show_boot_splash(bool selftests_ok)
 {
     if (!g_available) {
@@ -215,4 +247,59 @@ void framebuffer_show_boot_splash(bool selftests_ok)
     framebuffer_draw_text(g_fb.width / 12u, (g_fb.height * 2u) / 3u,
                           selftests_ok ? "SELFTEST PASS" : "SELFTEST FAIL",
                           selftests_ok ? 0x86EFACu : 0xFCA5A5u, scale);
+}
+
+void framebuffer_show_runtime(const struct noos_boot_info *boot,
+                              const struct pmm_stats *pmm,
+                              struct selftest_result tests)
+{
+    if (!g_available || boot == 0 || pmm == 0) {
+        return;
+    }
+
+    framebuffer_clear(0x0B1220u);
+    framebuffer_fill_rect(0, 0, g_fb.width, 72u, 0x1E293Bu);
+
+    const uint32_t label = 0x94A3B8u;
+    const uint32_t value = 0xF8FAFCu;
+    const uint32_t good = 0x86EFACu;
+    const uint32_t bad = 0xFCA5A5u;
+    const uint32_t x = 28u;
+    const uint32_t vx = 150u;
+    const uint32_t scale = 2u;
+
+    framebuffer_draw_text(x, 20u, "NOOS RM-915", value, 3u);
+
+    framebuffer_draw_text(x, 105u, "BOOT", label, scale);
+    framebuffer_draw_text(vx, 105u,
+                          boot->protocol == NOOS_BOOT_DTB ? "DTB" :
+                          boot->protocol == NOOS_BOOT_ATAGS ? "ATAGS" : "FAIL",
+                          value, scale);
+
+    framebuffer_draw_text(x, 155u, "RAM", label, scale);
+    framebuffer_draw_hex32(vx, 155u, boot->total_memory_bytes, value, scale);
+
+    framebuffer_draw_text(x, 205u, "FREE", label, scale);
+    framebuffer_draw_hex32(vx, 205u, pmm->free_pages, value, scale);
+
+    framebuffer_draw_text(x, 255u, "PERM", label, scale);
+    framebuffer_draw_hex32(vx, 255u, pmm->permanent_pages, value, scale);
+
+    framebuffer_draw_text(x, 305u, "FB", label, scale);
+    framebuffer_draw_hex32(vx, 305u, boot->framebuffer.address, value, scale);
+
+    framebuffer_draw_text(x, 380u, "TEST", label, scale);
+    framebuffer_draw_text(vx, 380u,
+                          tests.failed == 0 ? "PASS" : "FAIL",
+                          tests.failed == 0 ? good : bad, scale);
+
+    framebuffer_draw_text(x, 430u, "PASS", label, scale);
+    framebuffer_draw_hex32(vx, 430u, tests.passed, value, scale);
+
+    framebuffer_draw_text(x, 480u, "FAIL", label, scale);
+    framebuffer_draw_hex32(vx, 480u, tests.failed,
+                           tests.failed == 0 ? value : bad, scale);
+
+    framebuffer_fill_rect(0, g_fb.height - 54u, g_fb.width, 54u,
+                          tests.failed == 0 ? 0x14532Du : 0x7F1D1Du);
 }

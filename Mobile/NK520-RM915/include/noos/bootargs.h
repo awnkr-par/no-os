@@ -9,6 +9,7 @@ struct noos_boot_options {
     bool selftest;
     bool mmu_plan;
     bool scheduler_test;
+    bool timer_irq;
     uint32_t log_level;
 };
 

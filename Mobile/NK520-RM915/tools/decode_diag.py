@@ -6,8 +6,8 @@ import struct
 from pathlib import Path
 
 MAGIC = 0x4E444941
-VERSION = 6
-UINT_COUNT = 59
+VERSION = 7
+UINT_COUNT = 61
 PANIC_BYTES = 64
 LOG_BYTES = 256
 STRUCT_FORMAT = "<" + ("I" * UINT_COUNT) + f"{PANIC_BYTES}s{LOG_BYTES}s"
@@ -31,6 +31,7 @@ FIELDS = [
     "klog_bytes_written", "klog_bytes_overwritten", "klog_wraps", "klog_length",
     "scheduler_ticks", "scheduler_tasks", "scheduler_ready",
     "scheduler_sleeping", "scheduler_switches_planned",
+    "scheduler_reschedule_requests", "scheduler_context_switches",
     "irq_registered", "irq_dispatches", "irq_handled", "irq_spurious", "irq_last",
     "qgic_initialized", "qgic_irq_count", "qgic_last_ack",
     "qgic_spurious", "qgic_unhandled",
@@ -166,7 +167,9 @@ def print_record(v: dict[str, int | str]) -> None:
         "scheduler:      "
         f"ticks={v['scheduler_ticks']} tasks={v['scheduler_tasks']} "
         f"ready={v['scheduler_ready']} sleeping={v['scheduler_sleeping']} "
-        f"planned={v['scheduler_switches_planned']}"
+        f"planned={v['scheduler_switches_planned']} "
+        f"resched={v['scheduler_reschedule_requests']} "
+        f"switches={v['scheduler_context_switches']}"
     )
     print(
         "IRQ core:       "
@@ -218,23 +221,25 @@ def make_selftest_record() -> bytes:
     ints[42] = 1
     ints[43] = 1
     ints[44] = 4
-    ints[45] = 1
-    ints[46] = 2
+    ints[45] = 2
+    ints[46] = 1
     ints[47] = 1
-    ints[48] = 1
-    ints[49] = 43
+    ints[48] = 2
+    ints[49] = 1
     ints[50] = 1
-    ints[51] = 100
-    ints[52] = 17
-    ints[53] = 2
-    ints[54] = 0
-    ints[55] = 1
-    ints[56] = 100
-    ints[57] = 1234
-    ints[58] = 67500
+    ints[51] = 43
+    ints[52] = 1
+    ints[53] = 100
+    ints[54] = 17
+    ints[55] = 2
+    ints[56] = 0
+    ints[57] = 1
+    ints[58] = 100
+    ints[59] = 1234
+    ints[60] = 67500
 
     panic = b"".ljust(PANIC_BYTES, b"\0")
-    log = b"decoder v6 selftest".ljust(LOG_BYTES, b"\0")
+    log = b"decoder v7 selftest".ljust(LOG_BYTES, b"\0")
     raw = bytearray(struct.pack(STRUCT_FORMAT, *ints, panic, log))
     checksum = fnv1a_without_checksum(raw)
     struct.pack_into("<I", raw, 12, checksum)
@@ -259,12 +264,14 @@ def main() -> None:
         assert values["boot_option_flags"] == 0x1F
         assert values["klog_wraps"] == 2
         assert values["scheduler_tasks"] == 2
+        assert values["scheduler_reschedule_requests"] == 2
+        assert values["scheduler_context_switches"] == 1
         assert values["irq_handled"] == 1
         assert values["irq_last"] == 43
         assert values["qgic_initialized"] == 1
         assert values["timer_interrupts"] == 100
         assert values["timer_period_counts"] == 67500
-        print("diagnostic decoder v6 selftest: OK")
+        print("diagnostic decoder v7 selftest: OK")
         return
 
     if args.dump is None:

@@ -2,6 +2,7 @@
 #include <noos/exception.h>
 #include <noos/memory.h>
 #include <noos/panic.h>
+#include <noos/qgic.h>
 
 static struct noos_fault_state g_last_fault;
 
@@ -94,6 +95,26 @@ _Noreturn void exception_handle(uint32_t raw_type, uint32_t spsr,
     console_write("\n");
 
     panic("unhandled CPU exception");
+}
+
+void exception_irq_handle(uint32_t spsr,
+                          const struct noos_exception_frame *frame)
+{
+    if (qgic_handle_one()) {
+        return;
+    }
+
+    exception_handle(NOOS_EXC_IRQ, spsr, frame);
+}
+
+void arm_irq_enable(void)
+{
+    __asm__ volatile ("cpsie i" ::: "memory");
+}
+
+void arm_irq_disable(void)
+{
+    __asm__ volatile ("cpsid i" ::: "memory");
 }
 
 const struct noos_fault_state *exception_last_fault(void)

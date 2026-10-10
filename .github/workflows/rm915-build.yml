@@ -56,6 +56,7 @@ jobs:
           arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]uartdm_validate_full_init_plan$"
           arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]mmu_prepare_identity$"
           arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]mmu_validate_identity$"
+          arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]mmu_descriptor_is_device$"
           arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]__mmu_l1_start$"
           arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]__mmu_l1_end$"
           arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]__diag_start$"

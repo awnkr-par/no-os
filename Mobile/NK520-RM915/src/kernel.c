@@ -1,6 +1,7 @@
 #include <noos/boot.h>
 #include <noos/console.h>
 #include <noos/cpu.h>
+#include <noos/diagnostic.h>
 #include <noos/framebuffer.h>
 #include <noos/heap.h>
 #include <noos/panic.h>
@@ -28,10 +29,23 @@ static const char *pixel_format_name(enum noos_pixel_format format)
     }
 }
 
+static const char *reserved_kind_name(enum noos_reserved_kind kind)
+{
+    switch (kind) {
+    case NOOS_RESERVED_BOOT_DATA: return "boot-data";
+    case NOOS_RESERVED_FRAMEBUFFER: return "framebuffer";
+    case NOOS_RESERVED_INITRD: return "initrd";
+    case NOOS_RESERVED_DTB_MEMRESERVE: return "dtb-memreserve";
+    case NOOS_RESERVED_DTB_NODE: return "dtb-reserved";
+    default: return "generic";
+    }
+}
+
 static void log_cpu_state(void)
 {
     struct cpu_state state;
     cpu_read_state(&state);
+    diagnostic_capture_cpu(&state);
 
     console_write("CPU MIDR: ");
     console_write_hex32(state.midr);
@@ -66,8 +80,31 @@ static void log_memory_map(const struct noos_boot_info *info)
         console_write("\n");
     }
 
-    if (info->memory_truncated) {
-        console_write("WARNING: boot memory bank list truncated\n");
+    console_write("reserved ranges: ");
+    console_write_dec32(info->reserved_range_count);
+    console_write("\n");
+
+    for (uint32_t i = 0; i < info->reserved_range_count; ++i) {
+        const struct noos_reserved_range *range = &info->reserved_ranges[i];
+        console_write("  reserve ");
+        console_write(reserved_kind_name(range->kind));
+        console_write(": ");
+        console_write_hex32(range->start);
+        console_write(" + ");
+        console_write_hex32(range->size);
+        console_write("\n");
+    }
+
+    if (info->memory_truncated || info->reserved_truncated) {
+        console_write("WARNING: boot memory metadata truncated\n");
+    }
+
+    if (info->initrd_size != 0) {
+        console_write("initrd: ");
+        console_write_hex32(info->initrd_start);
+        console_write(" + ");
+        console_write_hex32(info->initrd_size);
+        console_write("\n");
     }
 }
 
@@ -107,6 +144,8 @@ static void log_boot_info(const struct noos_boot_info *info)
     console_write_hex32(info->machine_type);
     console_write("\nboot data: ");
     console_write_hex32(info->boot_data_address);
+    console_write(" + ");
+    console_write_hex32(info->boot_data_size);
     console_write("\nboot data valid: ");
     console_write(info->boot_data_valid ? "yes" : "no");
     console_write("\n");
@@ -152,10 +191,12 @@ void kernel_main(uint32_t boot_r0, uint32_t machine_type, uint32_t boot_data)
     struct noos_boot_info info;
 
     console_init();
+    diagnostic_init();
     boot_status_init();
     platform_early_init();
 
     boot_info_init(&info, boot_r0, machine_type, boot_data);
+    diagnostic_capture_boot(&info);
     boot_status_set(NOOS_STAGE_BOOT_INFO, (uint32_t)info.protocol);
 
     const bool have_framebuffer = framebuffer_init(&info.framebuffer);
@@ -172,13 +213,15 @@ void kernel_main(uint32_t boot_r0, uint32_t machine_type, uint32_t boot_data)
     if (!pmm_init(&info)) {
         panic("physical memory manager initialization failed");
     }
+    diagnostic_capture_pmm(pmm_get_stats());
     boot_status_set(NOOS_STAGE_MEMORY, pmm_get_stats()->free_pages);
 
     heap_init();
     boot_status_set(NOOS_STAGE_HEAP, 0);
     log_allocator_state();
 
-    const struct selftest_result tests = selftest_run();
+    const struct selftest_result tests = selftest_run(&info);
+    diagnostic_capture_selftest(tests);
     boot_status_set(NOOS_STAGE_SELFTEST, tests.failed);
 
     console_write("selftests passed/failed: ");
@@ -196,8 +239,10 @@ void kernel_main(uint32_t boot_r0, uint32_t machine_type, uint32_t boot_data)
     }
 
     log_allocator_state();
-    boot_status_set(NOOS_STAGE_READY, console_buffer_length());
+    diagnostic_capture_pmm(pmm_get_stats());
     console_write("kernel bring-up milestone complete; entering idle\n");
+    boot_status_set(NOOS_STAGE_READY, console_buffer_length());
+    diagnostic_capture_console();
 
     platform_idle();
 }

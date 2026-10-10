@@ -16,16 +16,18 @@ noOS accepts either legacy ARM ATAGS or a flattened device tree (DTB) passed in 
 
 DTB is preferred for the first visible boot because lk2nd can describe a bootloader-provided `simple-framebuffer`. noOS parses that node and can draw directly into the existing framebuffer without programming the Qualcomm MDP/display clocks.
 
-The relevant lk2nd OS command-line option is:
+The normal noOS build now embeds the relevant lk2nd OS command-line option automatically:
 
 ```text
 lk2nd.pass-simplefb=xrgb8888
 ```
 
+The Makefile exposes this as `BOOT_CMDLINE`, so no manual boot-image editing is required.
+
 If the panel requires command-mode refresh support, an lk2nd configuration may also need:
 
-```text
-lk2nd.pass-simplefb=xrgb8888,autorefresh
+```sh
+make -f GNUmakefile BOOT_CMDLINE='lk2nd.pass-simplefb=xrgb8888,autorefresh'
 ```
 
 Do not assume `autorefresh` is required until the actual Fame/lk2nd behavior is observed.

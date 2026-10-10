@@ -36,12 +36,13 @@ static void test_bootargs(void)
     struct noos_boot_options options;
     bootargs_parse(&options,
         "noos.splash=off noos.selftest=yes noos.mmu-plan=0 "
-        "noos.sched-test=true noos.loglevel=0x2A");
+        "noos.sched-test=true noos.timer-irq=yes noos.loglevel=0x2A");
 
     require(!options.splash, "splash boolean");
     require(options.selftest, "selftest boolean");
     require(!options.mmu_plan, "mmu-plan boolean");
     require(options.scheduler_test, "sched-test boolean");
+    require(options.timer_irq, "timer-irq boolean");
     require(options.log_level == 42u, "hex u32");
     require(bootargs_get_u32("x=4294967295", "x", 0) == UINT32_MAX,
             "u32 max decimal");

@@ -80,6 +80,9 @@ jobs:
       - name: Verify generated boot image
         run: make -f GNUmakefile verify
 
+      - name: Verify diagnostic decoder layout
+        run: python3 tools/decode_diag.py --selftest
+
       - name: Save disassembly
         run: make -f GNUmakefile disasm
 

@@ -213,6 +213,11 @@ void kernel_main(uint32_t boot_r0, uint32_t machine_type, uint32_t boot_data)
     boot_status_init();
     platform_early_init();
 
+    if (platform_debug_init()) {
+        console_set_sink(platform_debug_putc);
+        console_write("debug transport: LK GSBI5 UARTDM handoff\n");
+    }
+
     boot_info_init(&info, boot_r0, machine_type, boot_data);
     diagnostic_capture_boot(&info);
     boot_status_set(NOOS_STAGE_BOOT_INFO, (uint32_t)info.protocol);

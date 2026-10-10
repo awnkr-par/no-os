@@ -1,6 +1,7 @@
 #include <noos/bootargs.h>
 #include <noos/console.h>
 #include <noos/heap.h>
+#include <noos/irq.h>
 #include <noos/klog.h>
 #include <noos/memory.h>
 #include <noos/mmu.h>
@@ -53,6 +54,43 @@ static bool reserved_ranges_protected(const struct noos_boot_info *boot)
 static void dummy_task(void *context)
 {
     (void)context;
+}
+
+static uint32_t g_irq_test_count;
+
+static void dummy_irq(uint32_t irq, void *context)
+{
+    uint32_t *value = (uint32_t *)context;
+    if (irq == 42u && value != 0) {
+        (*value)++;
+    }
+}
+
+static bool irq_core_test(void)
+{
+    irq_init();
+    g_irq_test_count = 0;
+
+    if (!irq_register(42u, dummy_irq, &g_irq_test_count)) {
+        return false;
+    }
+    if (irq_register(42u, dummy_irq, &g_irq_test_count)) {
+        return false;
+    }
+    if (!irq_dispatch(42u) || g_irq_test_count != 1u) {
+        return false;
+    }
+    if (irq_dispatch(43u)) {
+        return false;
+    }
+
+    const struct irq_stats *stats = irq_get_stats();
+    if (stats->handled != 1u || stats->spurious != 1u ||
+        stats->dispatches != 2u || stats->last_irq != 43u) {
+        return false;
+    }
+
+    return irq_unregister(42u) && !irq_unregister(42u);
 }
 
 static bool scheduler_core_test(void)
@@ -151,6 +189,8 @@ struct selftest_result selftest_run(const struct noos_boot_info *boot,
     if (options == 0 || options->scheduler_test) {
         record(&result, scheduler_core_test(), "scheduler core state machine");
     }
+
+    record(&result, irq_core_test(), "generic IRQ registry/dispatch");
 
     char log_tail[64];
     const size_t snap = klog_snapshot(log_tail, sizeof(log_tail));

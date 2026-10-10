@@ -48,6 +48,9 @@ jobs:
           arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]pmm_alloc_page$"
           arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]kmalloc$"
           arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]selftest_run$"
+          arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]fdt_parse_boot_info$"
+          arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]framebuffer_show_boot_splash$"
+          arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]boot_status_set$"
 
       - name: Inspect artifacts
         run: |

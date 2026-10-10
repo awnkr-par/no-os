@@ -1,13 +1,6 @@
 OUTPUT_ARCH(arm)
 ENTRY(_start)
 
-/*
- * Nokia Lumia 520 (Fame) downstream boot-image layout:
- *   base          0x80200000
- *   kernel offset 0x00008000
- *   kernel load   0x80208000
- *   tags offset   0x00000100 -> 0x80200100
- */
 KERNEL_LOAD = 0x80208000;
 
 SECTIONS
@@ -47,10 +40,17 @@ SECTIONS
     }
 
     /*
-     * ARM exception modes have banked stack pointers. Keep dedicated stacks
-     * so a fault cannot trample the normal SVC/kernel stack while we capture
-     * diagnostics.
+     * Deliberately outside .bss so startup clearing does not erase the block
+     * before C explicitly initializes it. This also gives debuggers a stable
+     * linker symbol and section to locate after a failed boot.
      */
+    .noos_diag ALIGN(64) (NOLOAD) :
+    {
+        __diag_start = .;
+        KEEP(*(.noos_diag))
+        __diag_end = .;
+    }
+
     .stacks ALIGN(16) (NOLOAD) :
     {
         __svc_stack_bottom = .;

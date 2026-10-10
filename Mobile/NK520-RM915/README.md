@@ -24,7 +24,10 @@ The RM-915 target now has:
 - a small page-backed, 8-byte-aligned kernel heap;
 - boot-time memory/allocator self-tests including double-free and reservation protection;
 - a dedicated checksummed `.noos_diag` crash/boot record with a host-side decoder;
-- a 16 KiB-aligned ARMv7 L1 translation table builder that validates identity mappings without enabling the MMU;
+- a 16 KiB-aligned ARMv7 L1 translation table builder that validates RAM + verified debug-MMIO identity mappings without enabling the MMU;
+- a verified GSBI5/UARTDM handoff backend for LK/lk2nd chainloads, opt-in with `UARTDM_HANDOFF=1`;
+- compile-time + boot-time validation of the future full UART clock/TLMM initialization plan;
+- reproducible JSON build manifests containing image/diagnostic/MMU addresses, artifact hashes, boot cmdline, and UART mode;
 - raw ELF/BIN and legacy Android `boot.img` outputs;
 - boot-image verification tooling;
 - GitHub Actions checks for ARM architecture, entrypoint, core symbols, artifact validity, and disassembly generation.
@@ -104,6 +107,8 @@ The first-phone test should therefore prefer lk2nd's simple-framebuffer DTB hand
 - `docs/STATUS.md` — in-memory boot-stage breadcrumbs
 - `docs/DIAGNOSTICS.md` — persistent diagnostic record + decoder
 - `docs/MMU.md` — dry-run ARMv7 translation-table planning
+- `docs/UART.md` — verified GSBI5 UARTDM handoff and full-init plan
+- `docs/SOURCES.md` — target hardware constant provenance
 - `docs/MEMORY.md` — RAM map, bitmap PMM, and heap
 - `docs/EXCEPTIONS.md` — ARM exception stacks and crash capture
 - `docs/HARDWARE.md` — verified hardware facts and safety boundary
@@ -112,3 +117,22 @@ The first-phone test should therefore prefer lk2nd's simple-framebuffer DTB hand
 ## Do not flash blindly
 
 noOS is early bare-metal bring-up software. Prefer reversible or temporary boot paths and keep recovery firmware available.
+
+
+## Build variants
+
+Safe/default image (no UART MMIO access):
+
+```sh
+make -f GNUmakefile
+```
+
+LK/lk2nd UART-handoff image:
+
+```sh
+make -f GNUmakefile BUILD=build-uart UARTDM_HANDOFF=1
+```
+
+The UART variant adopts the GSBI5 UARTDM instance that Lumia LK already initialized. It does not reprogram clocks or TLMM. CI builds both variants on every change.
+
+Each build emits `noos-manifest.json` so the exact image bounds, diagnostic address, MMU table address, artifact hashes, boot cmdline, and UART mode are recorded alongside the binaries.

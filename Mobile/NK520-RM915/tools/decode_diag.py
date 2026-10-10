@@ -6,8 +6,8 @@ import struct
 from pathlib import Path
 
 MAGIC = 0x4E444941
-VERSION = 5
-UINT_COUNT = 50
+VERSION = 6
+UINT_COUNT = 59
 PANIC_BYTES = 64
 LOG_BYTES = 256
 STRUCT_FORMAT = "<" + ("I" * UINT_COUNT) + f"{PANIC_BYTES}s{LOG_BYTES}s"
@@ -32,6 +32,10 @@ FIELDS = [
     "scheduler_ticks", "scheduler_tasks", "scheduler_ready",
     "scheduler_sleeping", "scheduler_switches_planned",
     "irq_registered", "irq_dispatches", "irq_handled", "irq_spurious", "irq_last",
+    "qgic_initialized", "qgic_irq_count", "qgic_last_ack",
+    "qgic_spurious", "qgic_unhandled",
+    "timer_initialized", "timer_interrupts", "timer_last_count",
+    "timer_period_counts",
 ]
 
 STAGES = {
@@ -117,7 +121,7 @@ def print_record(v: dict[str, int | str]) -> None:
         "boot options:   "
         f"splash={bool(flags & 1)} selftest={bool(flags & 2)} "
         f"mmu-plan={bool(flags & 4)} sched-test={bool(flags & 8)} "
-        f"loglevel={v['boot_log_level']}"
+        f"timer-irq={bool(flags & 16)} loglevel={v['boot_log_level']}"
     )
     print(f"CPU MIDR:       0x{int(v['cpu_midr']):08X}")
     print(f"CPU CPSR:       0x{int(v['cpu_cpsr']):08X}")
@@ -170,6 +174,19 @@ def print_record(v: dict[str, int | str]) -> None:
         f"handled={v['irq_handled']} spurious={v['irq_spurious']} "
         f"last={v['irq_last']}"
     )
+    print(
+        "QGIC:           "
+        f"initialized={bool(v['qgic_initialized'])} irqs={v['qgic_irq_count']} "
+        f"last_ack=0x{int(v['qgic_last_ack']):08X} "
+        f"spurious={v['qgic_spurious']} unhandled={v['qgic_unhandled']}"
+    )
+    print(
+        "DGT timer:      "
+        f"initialized={bool(v['timer_initialized'])} "
+        f"interrupts={v['timer_interrupts']} "
+        f"last_count={v['timer_last_count']} "
+        f"period={v['timer_period_counts']}"
+    )
     print(f"panic reason:   {v['panic_reason'] or '(none)'}")
     print("--- log tail ---")
     print(v["log_tail"] or "(empty)")
@@ -183,7 +200,7 @@ def make_selftest_record() -> bytes:
     ints[4] = 8
     ints[6] = 2
     ints[9] = 0x20000000
-    ints[11] = 0xF
+    ints[11] = 0x1F
     ints[12] = 4
     ints[16] = 131072
     ints[17] = 120000
@@ -206,9 +223,18 @@ def make_selftest_record() -> bytes:
     ints[47] = 1
     ints[48] = 1
     ints[49] = 43
+    ints[50] = 1
+    ints[51] = 100
+    ints[52] = 17
+    ints[53] = 2
+    ints[54] = 0
+    ints[55] = 1
+    ints[56] = 100
+    ints[57] = 1234
+    ints[58] = 67500
 
     panic = b"".ljust(PANIC_BYTES, b"\0")
-    log = b"decoder v4 selftest".ljust(LOG_BYTES, b"\0")
+    log = b"decoder v6 selftest".ljust(LOG_BYTES, b"\0")
     raw = bytearray(struct.pack(STRUCT_FORMAT, *ints, panic, log))
     checksum = fnv1a_without_checksum(raw)
     struct.pack_into("<I", raw, 12, checksum)
@@ -230,12 +256,15 @@ def main() -> None:
         assert values["stage"] == 8
         assert values["boot_protocol"] == 2
         assert values["selftests_passed"] == 12
-        assert values["boot_option_flags"] == 0xF
+        assert values["boot_option_flags"] == 0x1F
         assert values["klog_wraps"] == 2
         assert values["scheduler_tasks"] == 2
         assert values["irq_handled"] == 1
         assert values["irq_last"] == 43
-        print("diagnostic decoder v5 selftest: OK")
+        assert values["qgic_initialized"] == 1
+        assert values["timer_interrupts"] == 100
+        assert values["timer_period_counts"] == 67500
+        print("diagnostic decoder v6 selftest: OK")
         return
 
     if args.dump is None:

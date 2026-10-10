@@ -1,6 +1,7 @@
 #include <noos/console.h>
 #include <noos/heap.h>
 #include <noos/memory.h>
+#include <noos/mmu.h>
 #include <noos/pmm.h>
 #include <noos/selftest.h>
 #include <noos/uartdm.h>
@@ -100,6 +101,12 @@ struct selftest_result selftest_run(const struct noos_boot_info *boot)
 
     record(&result, uartdm_validate_full_init_plan(),
            "RM915 UART full-init constant plan");
+
+    record(&result,
+           mmu_descriptor_is_device(mmu_l1_descriptor(0x00800000u)) &&
+           mmu_descriptor_is_device(mmu_l1_descriptor(0x00900000u)) &&
+           mmu_descriptor_is_device(mmu_l1_descriptor(0x16400000u)),
+           "RM915 UART MMIO device mappings");
 
     return result;
 }

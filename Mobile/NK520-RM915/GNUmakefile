@@ -29,14 +29,17 @@ OBJECTS := \
 	$(BUILD)/src/kernel.o \
 	$(BUILD)/src/boot.o \
 	$(BUILD)/src/console.o \
+	$(BUILD)/src/exception.o \
+	$(BUILD)/src/heap.o \
 	$(BUILD)/src/memory.o \
 	$(BUILD)/src/panic.o \
 	$(BUILD)/src/pmm.o \
+	$(BUILD)/src/selftest.o \
 	$(BUILD)/platform/rm915/platform.o
 
-.PHONY: all clean disasm size check-toolchain bootimg
+.PHONY: all clean disasm size check-toolchain bootimg verify
 
-all: check-toolchain $(TARGET).elf $(TARGET).bin $(TARGET)-boot.img size
+all: check-toolchain $(TARGET).elf $(TARGET).bin $(TARGET)-boot.img verify size
 
 check-toolchain:
 	@command -v $(CC) >/dev/null || { echo "error: $(CC) not found"; exit 1; }
@@ -62,6 +65,9 @@ $(BUILD)/%.o: %.c
 $(BUILD)/arch/arm/%.o: arch/arm/%.S
 	@mkdir -p $(@D)
 	$(CC) $(CPPFLAGS) $(ASFLAGS) -c $< -o $@
+
+verify: $(TARGET)-boot.img tools/verify_bootimg.py
+	$(PYTHON) tools/verify_bootimg.py $(TARGET)-boot.img
 
 disasm: $(TARGET).elf
 	$(OBJDUMP) -D $< > $(TARGET).lst

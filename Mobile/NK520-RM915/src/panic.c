@@ -1,4 +1,5 @@
 #include <noos/console.h>
+#include <noos/diagnostic.h>
 #include <noos/framebuffer.h>
 #include <noos/panic.h>
 #include <noos/status.h>
@@ -25,6 +26,7 @@ _Noreturn void panic(const char *reason)
     console_write("PANIC: ");
     console_write(reason != 0 ? reason : "(no reason)");
     console_write("\n");
+    diagnostic_capture_panic(reason != 0 ? reason : "(no reason)");
 
     if (framebuffer_available()) {
         framebuffer_show_boot_splash(false);

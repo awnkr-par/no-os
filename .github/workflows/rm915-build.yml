@@ -86,6 +86,13 @@ jobs:
       - name: Save disassembly
         run: make -f GNUmakefile disasm
 
+      - name: Compile UARTDM handoff variant
+        run: |
+          make -f GNUmakefile BUILD=build-uart UARTDM_HANDOFF=1
+          arm-none-eabi-nm build-uart/noos.elf | grep -Eq "[[:space:]]uartdm_adopt_bootloader$"
+          arm-none-eabi-nm build-uart/noos.elf | grep -Eq "[[:space:]]uartdm_putc$"
+          test -s build-uart/noos-manifest.json
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:

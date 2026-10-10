@@ -1,6 +1,7 @@
 #ifndef NOOS_CPU_H
 #define NOOS_CPU_H
 
+#include <stdbool.h>
 #include <stdint.h>
 
 struct cpu_state {

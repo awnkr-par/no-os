@@ -182,24 +182,9 @@ bool pmm_init(const struct noos_boot_info *boot)
     pmm_reserve_range((uint32_t)(uintptr_t)__image_start,
                       (uint32_t)((uintptr_t)__image_end - (uintptr_t)__image_start));
 
-    if (boot->boot_data_address != 0) {
-        pmm_reserve_range(boot->boot_data_address, NOOS_PAGE_SIZE);
-    }
-
-    if (boot->framebuffer.valid && boot->framebuffer.address != 0) {
-        uint32_t framebuffer_size = boot->framebuffer.size;
-        if (framebuffer_size == 0 && boot->framebuffer.stride != 0 &&
-            boot->framebuffer.height != 0) {
-            const uint64_t calculated =
-                (uint64_t)boot->framebuffer.stride * (uint64_t)boot->framebuffer.height;
-            if (calculated <= UINT32_MAX) {
-                framebuffer_size = (uint32_t)calculated;
-            }
-        }
-
-        if (framebuffer_size != 0) {
-            pmm_reserve_range(boot->framebuffer.address, framebuffer_size);
-        }
+    for (uint32_t i = 0; i < boot->reserved_range_count; ++i) {
+        pmm_reserve_range(boot->reserved_ranges[i].start,
+                          boot->reserved_ranges[i].size);
     }
 
     g_stats.allocation_hint = 0;
@@ -259,6 +244,15 @@ bool pmm_page_is_free(uint32_t address)
         return false;
     }
     return !page_used(index);
+}
+
+bool pmm_page_is_permanent(uint32_t address)
+{
+    uint32_t index;
+    if (!g_ready || !page_index(align_down(address), &index)) {
+        return false;
+    }
+    return page_permanent(index);
 }
 
 const struct pmm_stats *pmm_get_stats(void)

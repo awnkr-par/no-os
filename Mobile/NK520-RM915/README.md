@@ -139,3 +139,16 @@ make -f GNUmakefile BUILD=build-uart UARTDM_HANDOFF=1
 The UART variant adopts the GSBI5 UARTDM instance that Lumia LK already initialized. It does not reprogram clocks or TLMM. CI builds both variants on every change.
 
 Each build emits `noos-manifest.json` so the exact image bounds, diagnostic address, MMU table address, artifact hashes, boot cmdline, and UART mode are recorded alongside the binaries.
+
+
+## Boot command-line knobs
+
+The build now separates bootloader and kernel options:
+
+```sh
+make -f GNUmakefile \
+  LK2ND_CMDLINE='lk2nd.pass-simplefb=xrgb8888,autorefresh' \
+  NOOS_CMDLINE='noos.splash=1 noos.selftest=1 noos.mmu-plan=1 noos.sched-test=1 noos.loglevel=2'
+```
+
+`BOOT_CMDLINE` is composed automatically from those two variables.

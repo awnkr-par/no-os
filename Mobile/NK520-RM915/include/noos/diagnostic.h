@@ -8,13 +8,15 @@
 #include <noos/klog.h>
 #include <noos/mmu.h>
 #include <noos/pmm.h>
+#include <noos/qgic.h>
 #include <noos/scheduler.h>
 #include <noos/selftest.h>
+#include <noos/timer.h>
 #include <noos/uartdm.h>
 #include <stdint.h>
 
 #define NOOS_DIAG_MAGIC 0x4E444941u
-#define NOOS_DIAG_VERSION 5u
+#define NOOS_DIAG_VERSION 6u
 #define NOOS_DIAG_PANIC_BYTES 64u
 #define NOOS_DIAG_LOG_BYTES 256u
 
@@ -82,6 +84,17 @@ struct noos_diagnostic_record {
     uint32_t irq_spurious;
     uint32_t irq_last;
 
+    uint32_t qgic_initialized;
+    uint32_t qgic_irq_count;
+    uint32_t qgic_last_ack;
+    uint32_t qgic_spurious;
+    uint32_t qgic_unhandled;
+
+    uint32_t timer_initialized;
+    uint32_t timer_interrupts;
+    uint32_t timer_last_count;
+    uint32_t timer_period_counts;
+
     char panic_reason[NOOS_DIAG_PANIC_BYTES];
     char log_tail[NOOS_DIAG_LOG_BYTES];
 };
@@ -97,6 +110,8 @@ void diagnostic_capture_uart(const struct uartdm_stats *uart);
 void diagnostic_capture_selftest(struct selftest_result result);
 void diagnostic_capture_scheduler(const struct scheduler_stats *scheduler);
 void diagnostic_capture_irq(const struct irq_stats *irq);
+void diagnostic_capture_qgic(const struct qgic_stats *qgic);
+void diagnostic_capture_timer(const struct rm915_timer_stats *timer);
 void diagnostic_capture_panic(const char *reason);
 void diagnostic_capture_console(void);
 const struct noos_diagnostic_record *diagnostic_get(void);

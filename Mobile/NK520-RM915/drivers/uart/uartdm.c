@@ -16,6 +16,42 @@
 
 static struct uartdm_stats g_uart;
 
+/*
+ * Verified from Android4Lumia bootloader_msm8227, L520_stable:
+ *
+ *   target/msm8960/init.c
+ *   platform/msm8960/gpio.c
+ *   platform/msm8960/include/platform/{iomap,clock}.h
+ *   platform/msm8960/clock.c
+ *   platform/msm_shared/{uart_dm.c,include/gsbi.h}
+ *
+ * This is a DATA PLAN ONLY. noOS does not execute these clock/TLMM writes.
+ */
+static const struct uartdm_full_init_plan g_full_plan = {
+    .tlmm_tx_cfg = 0x00801160u,
+    .tlmm_rx_cfg = 0x00801170u,
+    .tlmm_cfg_value = 0x000000C4u,
+
+    .gsbi_ctrl = 0x16400000u,
+    .gsbi_protocol_value = 0x00000060u,
+
+    .clk_hclk_ctl = 0x00902A40u,
+    .clk_uart_md = 0x00902A50u,
+    .clk_uart_ns = 0x00902A54u,
+    .clk_reset = 0x00902A5Cu,
+
+    /*
+     * 1.8432 MHz GSBI UART clock:
+     *   F_GSBI_UART(1843200, pll8, 1, 3, 625)
+     *   MD16(3, 625) = 0x0003FD8E
+     *   NS(...625,3,...d=1,...pll8 mux=3) = 0xFD910043
+     */
+    .uart_md_value = 0x0003FD8Eu,
+    .uart_ns_value = 0xFD910043u,
+    .uart_target_hz = 1843200u,
+    .uart_baud = 115200u,
+};
+
 static uint32_t reg(uint32_t offset)
 {
     return NOOS_RM915_UARTDM_BASE + offset;
@@ -102,4 +138,48 @@ void uartdm_write(const char *data, size_t length)
 const struct uartdm_stats *uartdm_get_stats(void)
 {
     return &g_uart;
+}
+
+const struct uartdm_full_init_plan *uartdm_full_init_plan(void)
+{
+    return &g_full_plan;
+}
+
+bool uartdm_validate_full_init_plan(void)
+{
+    const uint32_t expected_tx_cfg =
+        0x00800000u + 0x1000u + NOOS_RM915_UART_TX_GPIO * 0x10u;
+    const uint32_t expected_rx_cfg =
+        0x00800000u + 0x1000u + NOOS_RM915_UART_RX_GPIO * 0x10u;
+
+    const uint32_t expected_hclk =
+        0x00900000u + 0x29C0u + 0x20u * (NOOS_RM915_GSBI_ID - 1u);
+    const uint32_t expected_md =
+        0x00900000u + 0x29D0u + 0x20u * (NOOS_RM915_GSBI_ID - 1u);
+    const uint32_t expected_ns =
+        0x00900000u + 0x29D4u + 0x20u * (NOOS_RM915_GSBI_ID - 1u);
+    const uint32_t expected_reset =
+        0x00900000u + 0x29DCu + 0x20u * (NOOS_RM915_GSBI_ID - 1u);
+
+    const uint32_t md16 =
+        (3u << 16) | ((~625u) & 0xFFFFu);
+    const uint32_t ns =
+        (((~(625u - 3u)) & 0xFFFFu) << 16) |
+        (2u << 5) |
+        3u;
+
+    return
+        g_full_plan.tlmm_tx_cfg == expected_tx_cfg &&
+        g_full_plan.tlmm_rx_cfg == expected_rx_cfg &&
+        g_full_plan.tlmm_cfg_value == 0xC4u &&
+        g_full_plan.gsbi_ctrl == NOOS_RM915_GSBI_BASE &&
+        g_full_plan.gsbi_protocol_value == 0x60u &&
+        g_full_plan.clk_hclk_ctl == expected_hclk &&
+        g_full_plan.clk_uart_md == expected_md &&
+        g_full_plan.clk_uart_ns == expected_ns &&
+        g_full_plan.clk_reset == expected_reset &&
+        g_full_plan.uart_md_value == md16 &&
+        g_full_plan.uart_ns_value == ns &&
+        g_full_plan.uart_target_hz == 1843200u &&
+        g_full_plan.uart_baud == 115200u;
 }

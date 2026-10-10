@@ -32,6 +32,7 @@ OBJECTS := \
 	$(BUILD)/arch/arm/start.o \
 	$(BUILD)/src/kernel.o \
 	$(BUILD)/src/boot.o \
+	$(BUILD)/src/bootargs.o \
 	$(BUILD)/src/console.o \
 	$(BUILD)/src/cpu.o \
 	$(BUILD)/src/diagnostic.o \
@@ -39,10 +40,12 @@ OBJECTS := \
 	$(BUILD)/src/fdt.o \
 	$(BUILD)/src/framebuffer.o \
 	$(BUILD)/src/heap.o \
+	$(BUILD)/src/klog.o \
 	$(BUILD)/src/memory.o \
 	$(BUILD)/src/mmu.o \
 	$(BUILD)/src/panic.o \
 	$(BUILD)/src/pmm.o \
+	$(BUILD)/src/scheduler.o \
 	$(BUILD)/src/selftest.o \
 	$(BUILD)/src/status.o \
 	$(BUILD)/drivers/uart/uartdm.o \

@@ -31,7 +31,7 @@ The downstream Linux command line uses `console=ttyHSL0,115200,n8`, establishing
 
 Recent U-Boot work tested on a Nokia Lumia 520 confirms that the phone can be chained directly from SBL3. In that path, U-Boot receives legacy ARM ATAGS. ARM32 passes the ATAGS/FDT pointer in `r2`.
 
-noOS therefore preserves `r0`, `r1`, and `r2` at entry and parses legacy ATAGS before touching platform-specific peripherals.
+noOS preserves `r0`, `r1`, and `r2` at entry and detects whether `r2` contains legacy ATAGS or a flattened device tree. The DTB path can also consume a bootloader-provided `simple-framebuffer`, allowing first visual output without programming the Qualcomm display controller.
 
 ## UART status
 

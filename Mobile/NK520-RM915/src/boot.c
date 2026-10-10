@@ -12,6 +12,11 @@ struct atag_mem32 {
     uint32_t start;
 };
 
+struct atag_initrd2 {
+    uint32_t start;
+    uint32_t size;
+};
+
 struct atag_videolfb {
     uint16_t width;
     uint16_t height;
@@ -33,6 +38,7 @@ struct atag {
     struct atag_header hdr;
     union {
         struct atag_mem32 mem;
+        struct atag_initrd2 initrd2;
         struct atag_videolfb videolfb;
         char cmdline[1];
     } u;
@@ -67,6 +73,37 @@ static void add_memory_bank(struct noos_boot_info *info, uint32_t start, uint32_
     }
 }
 
+bool boot_add_reserved_range(struct noos_boot_info *info, uint32_t start,
+                             uint32_t size, enum noos_reserved_kind kind)
+{
+    if (info == 0 || size == 0) {
+        return false;
+    }
+
+    if (start + size < start) {
+        return false;
+    }
+
+    for (uint32_t i = 0; i < info->reserved_range_count; ++i) {
+        const struct noos_reserved_range *existing = &info->reserved_ranges[i];
+        if (existing->start == start && existing->size == size && existing->kind == kind) {
+            return true;
+        }
+    }
+
+    if (info->reserved_range_count >= NOOS_MAX_RESERVED_RANGES) {
+        info->reserved_truncated = true;
+        return false;
+    }
+
+    struct noos_reserved_range *range =
+        &info->reserved_ranges[info->reserved_range_count++];
+    range->start = start;
+    range->size = size;
+    range->kind = kind;
+    return true;
+}
+
 static enum noos_pixel_format atag_video_format(const struct atag_videolfb *video)
 {
     if (video->depth == 16 &&
@@ -97,6 +134,12 @@ static bool parse_atags(struct noos_boot_info *info, uint32_t address)
 
     for (uint32_t count = 0; count < 256; ++count) {
         if (tag->hdr.tag == NOOS_ATAG_NONE && tag->hdr.size == 0) {
+            const uintptr_t end = (uintptr_t)tag + sizeof(struct atag_header);
+            if (end >= address && end - address <= UINT32_MAX) {
+                info->boot_data_size = (uint32_t)(end - address);
+                boot_add_reserved_range(info, address, info->boot_data_size,
+                                        NOOS_RESERVED_BOOT_DATA);
+            }
             return saw_core;
         }
 
@@ -111,6 +154,14 @@ static bool parse_atags(struct noos_boot_info *info, uint32_t address)
         case NOOS_ATAG_MEM:
             if (tag->hdr.size >= 4) {
                 add_memory_bank(info, tag->u.mem.start, tag->u.mem.size);
+            }
+            break;
+        case NOOS_ATAG_INITRD2:
+            if (tag->hdr.size >= 4 && tag->u.initrd2.size != 0) {
+                info->initrd_start = tag->u.initrd2.start;
+                info->initrd_size = tag->u.initrd2.size;
+                boot_add_reserved_range(info, info->initrd_start, info->initrd_size,
+                                        NOOS_RESERVED_INITRD);
             }
             break;
         case NOOS_ATAG_VIDEOLFB:
@@ -153,6 +204,22 @@ void boot_info_init(struct noos_boot_info *info, uint32_t r0, uint32_t r1, uint3
     } else {
         info->protocol = NOOS_BOOT_ATAGS;
         info->boot_data_valid = parse_atags(info, r2);
+    }
+
+    if (info->framebuffer.valid && info->framebuffer.address != 0) {
+        uint32_t size = info->framebuffer.size;
+        if (size == 0 && info->framebuffer.stride != 0 && info->framebuffer.height != 0) {
+            const uint64_t calculated =
+                (uint64_t)info->framebuffer.stride * (uint64_t)info->framebuffer.height;
+            if (calculated <= UINT32_MAX) {
+                size = (uint32_t)calculated;
+            }
+        }
+
+        if (size != 0) {
+            boot_add_reserved_range(info, info->framebuffer.address, size,
+                                    NOOS_RESERVED_FRAMEBUFFER);
+        }
     }
 
     if (!info->boot_data_valid) {

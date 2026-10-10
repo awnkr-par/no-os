@@ -76,6 +76,7 @@ jobs:
           test -s build/noos.bin
           test -s build/noos-boot.img
           test -s build/noos.map
+          test -s build/noos-manifest.json
 
       - name: Verify generated boot image
         run: make -f GNUmakefile verify
@@ -97,3 +98,4 @@ jobs:
             Mobile/NK520-RM915/build/noos-boot.img
             Mobile/NK520-RM915/build/noos.map
             Mobile/NK520-RM915/build/noos.lst
+            Mobile/NK520-RM915/build/noos-manifest.json

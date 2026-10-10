@@ -55,6 +55,18 @@ build/noos.lst   # after make disasm / CI
 
 The regular build also runs `tools/verify_bootimg.py`.
 
+By default the generated boot image embeds:
+
+```text
+lk2nd.pass-simplefb=xrgb8888
+```
+
+Override it when testing command-mode refresh behavior:
+
+```sh
+make -f GNUmakefile BOOT_CMDLINE='lk2nd.pass-simplefb=xrgb8888,autorefresh'
+```
+
 ## Bring-up path
 
 `noos.bin` is the raw payload for controlled chainloading experiments.

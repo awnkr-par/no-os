@@ -118,6 +118,20 @@ void diagnostic_capture_pmm(const struct pmm_stats *pmm)
     refresh_checksum();
 }
 
+void diagnostic_capture_mmu(const struct mmu_stats *mmu)
+{
+    if (mmu == 0) {
+        return;
+    }
+
+    g_diag.mmu_table_address = mmu->table_address;
+    g_diag.mmu_mapped_sections = mmu->mapped_sections;
+    g_diag.mmu_first_section = mmu->first_mapped_section;
+    g_diag.mmu_last_section = mmu->last_mapped_section;
+    g_diag.mmu_validated = mmu->validated ? 1u : 0u;
+    refresh_checksum();
+}
+
 void diagnostic_capture_selftest(struct selftest_result result)
 {
     g_diag.selftests_passed = result.passed;

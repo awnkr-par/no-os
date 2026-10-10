@@ -18,6 +18,10 @@
 - multiple `ATAG_MEM` banks
 - bounded FDT walker
 - DTB RAM and `/chosen/bootargs` parsing
+- DTB memreserve parsing
+- `/reserved-memory` parsing
+- initrd detection/reservation
+- full DTB blob reservation
 - legacy Android `boot.img` generation and validation
 
 ## Milestone 2 — kernel diagnostics and memory ✅
@@ -29,10 +33,13 @@
 - dedicated SVC/IRQ/FIQ/abort/undefined stacks
 - register + ARM fault-status exception capture
 - 512 MiB-capable bitmap PMM
-- permanent kernel/boot-data/framebuffer reservations
+- permanent kernel/boot-data/framebuffer/initrd/DTB reservations
 - allocation/free accounting
 - page-backed kernel heap
 - boot-time memory allocator self-tests
+- double-free rejection test
+- reserved-range permanence test
+- checksummed `.noos_diag` block + decoder
 - CI architecture, entrypoint, symbol, artifact, and boot-image checks
 
 ## Milestone 3 — first observable hardware output ✅/TEST NEEDED
@@ -61,13 +68,22 @@ Needs real Lumia validation:
 - implement minimal UARTDM TX
 - replay the complete early console over UART
 
-## Milestone 5 — virtual memory and CPU state
+## Milestone 5 — virtual memory and CPU state 🚧
+
+Implemented:
+
+- 16 KiB-aligned ARMv7 short-descriptor L1 table
+- identity-map all declared RAM with 1 MiB sections
+- validate every generated identity mapping
+- record MMU plan in diagnostics
+- keep SCTLR.M untouched
+
+Remaining:
 
 - validate all device/reserved RAM regions
-- ARMv7 short-descriptor translation tables
-- identity-map early kernel + required MMIO
+- identity-map required MMIO
 - domain/access permissions
-- guarded MMU enablement
+- guarded MMU enablement after device mappings exist
 - I-cache/D-cache sequencing
 - page-fault diagnostics against the new tables
 

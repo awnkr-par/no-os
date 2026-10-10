@@ -1,13 +1,16 @@
 #include <noos/boot.h>
+#include <noos/bootargs.h>
 #include <noos/console.h>
 #include <noos/cpu.h>
 #include <noos/diagnostic.h>
 #include <noos/framebuffer.h>
 #include <noos/heap.h>
+#include <noos/klog.h>
 #include <noos/mmu.h>
 #include <noos/panic.h>
 #include <noos/platform.h>
 #include <noos/pmm.h>
+#include <noos/scheduler.h>
 #include <noos/selftest.h>
 #include <noos/status.h>
 #include <noos/uartdm.h>
@@ -227,8 +230,17 @@ void kernel_main(uint32_t boot_r0, uint32_t machine_type, uint32_t boot_data)
     diagnostic_capture_boot(&info);
     boot_status_set(NOOS_STAGE_BOOT_INFO, (uint32_t)info.protocol);
 
+    struct noos_boot_options options;
+    bootargs_parse(&options, info.command_line);
+    console_printf("boot options: splash=%s selftest=%s mmu-plan=%s sched-test=%s loglevel=%u\n",
+                   options.splash ? "on" : "off",
+                   options.selftest ? "on" : "off",
+                   options.mmu_plan ? "on" : "off",
+                   options.scheduler_test ? "on" : "off",
+                   options.log_level);
+
     const bool have_framebuffer = framebuffer_init(&info.framebuffer);
-    if (have_framebuffer) {
+    if (have_framebuffer && options.splash) {
         framebuffer_show_booting();
     }
 
@@ -248,36 +260,46 @@ void kernel_main(uint32_t boot_r0, uint32_t machine_type, uint32_t boot_data)
     boot_status_set(NOOS_STAGE_HEAP, 0);
     log_allocator_state();
 
-    if (!mmu_prepare_identity(&info)) {
-        panic("MMU identity-map planning failed");
-    }
-    diagnostic_capture_mmu(mmu_get_stats());
-    boot_status_set(NOOS_STAGE_MMU_PLAN, mmu_get_stats()->mapped_sections);
-    log_mmu_state();
-
-    const struct selftest_result tests = selftest_run(&info);
-    diagnostic_capture_selftest(tests);
-    boot_status_set(NOOS_STAGE_SELFTEST, tests.failed);
-
-    console_write("selftests passed/failed: ");
-    console_write_dec32(tests.passed);
-    console_write("/");
-    console_write_dec32(tests.failed);
-    console_write("\n");
-
-    if (!selftest_ok(tests)) {
-        panic("kernel self-test failed");
+    if (options.mmu_plan) {
+        if (!mmu_prepare_identity(&info)) {
+            panic("MMU identity-map planning failed");
+        }
+        diagnostic_capture_mmu(mmu_get_stats());
+        boot_status_set(NOOS_STAGE_MMU_PLAN, mmu_get_stats()->mapped_sections);
+        log_mmu_state();
+    } else {
+        console_write("MMU plan: disabled by boot option\n");
     }
 
-    if (have_framebuffer) {
+    scheduler_init();
+
+    struct selftest_result tests = {0, 0};
+    if (options.selftest) {
+        tests = selftest_run(&info, &options);
+        diagnostic_capture_selftest(tests);
+        boot_status_set(NOOS_STAGE_SELFTEST, tests.failed);
+        console_printf("selftests passed/failed: %u/%u\n", tests.passed, tests.failed);
+
+        if (!selftest_ok(tests)) {
+            panic("kernel self-test failed");
+        }
+    } else {
+        console_write("selftests: disabled by boot option\n");
+    }
+
+    if (have_framebuffer && options.splash) {
         framebuffer_show_runtime(&info, pmm_get_stats(), tests);
     }
 
     log_allocator_state();
     diagnostic_capture_pmm(pmm_get_stats());
     diagnostic_capture_uart(uartdm_get_stats());
+    const struct klog_stats *log_stats = klog_get_stats();
+    console_printf("klog: bytes=%u wraps=%u overwritten=%u retained=%u\n",
+                   log_stats->bytes_written, log_stats->wraps,
+                   log_stats->bytes_dropped, log_stats->length);
     console_write("kernel bring-up milestone complete; entering idle\n");
-    boot_status_set(NOOS_STAGE_READY, console_buffer_length());
+    boot_status_set(NOOS_STAGE_READY, log_stats->length);
     diagnostic_capture_console();
 
     platform_idle();

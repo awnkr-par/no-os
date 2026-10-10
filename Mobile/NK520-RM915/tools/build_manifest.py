@@ -70,6 +70,7 @@ def main() -> None:
     ap.add_argument("--output", type=Path, required=True)
     ap.add_argument("--nm", default="arm-none-eabi-nm")
     ap.add_argument("--boot-cmdline", default="")
+    ap.add_argument("--uartdm-handoff", type=int, choices=(0, 1), default=0)
     args = ap.parse_args()
 
     symbols = symbol_map(args.nm, args.elf)
@@ -98,6 +99,7 @@ def main() -> None:
             "enabled": False,
         },
         "boot_cmdline": args.boot_cmdline,
+        "uartdm_handoff": bool(args.uartdm_handoff),
         "artifacts": {
             "elf": file_info(args.elf),
             "bin": file_info(args.binary),

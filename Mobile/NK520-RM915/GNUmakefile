@@ -28,8 +28,10 @@ OBJECTS := \
 	$(BUILD)/arch/arm/start.o \
 	$(BUILD)/src/kernel.o \
 	$(BUILD)/src/boot.o \
+	$(BUILD)/src/console.o \
 	$(BUILD)/src/memory.o \
 	$(BUILD)/src/panic.o \
+	$(BUILD)/src/pmm.o \
 	$(BUILD)/platform/rm915/platform.o
 
 .PHONY: all clean disasm size check-toolchain bootimg

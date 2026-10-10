@@ -12,7 +12,8 @@ enum noos_boot_stage {
     NOOS_STAGE_MEMORY = 4,
     NOOS_STAGE_HEAP = 5,
     NOOS_STAGE_SELFTEST = 6,
-    NOOS_STAGE_READY = 7,
+    NOOS_STAGE_MMU_PLAN = 7,
+    NOOS_STAGE_READY = 8,
     NOOS_STAGE_PANIC = 0xFF
 };
 

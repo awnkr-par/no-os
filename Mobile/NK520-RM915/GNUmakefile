@@ -31,11 +31,14 @@ OBJECTS := \
 	$(BUILD)/src/console.o \
 	$(BUILD)/src/cpu.o \
 	$(BUILD)/src/exception.o \
+	$(BUILD)/src/fdt.o \
+	$(BUILD)/src/framebuffer.o \
 	$(BUILD)/src/heap.o \
 	$(BUILD)/src/memory.o \
 	$(BUILD)/src/panic.o \
 	$(BUILD)/src/pmm.o \
 	$(BUILD)/src/selftest.o \
+	$(BUILD)/src/status.o \
 	$(BUILD)/platform/rm915/platform.o
 
 .PHONY: all clean disasm size check-toolchain bootimg verify

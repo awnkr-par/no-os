@@ -1,1 +1,0 @@
-All the software, firmware and hardware specs from the device exist in this folder.

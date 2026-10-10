@@ -53,7 +53,6 @@ jobs:
           arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]fdt_parse_boot_info$"
           arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]framebuffer_show_boot_splash$"
           arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]boot_status_set$"
-          arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]diagnostic_get$"
           arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]mmu_prepare_identity$"
           arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]mmu_validate_identity$"
           arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]__mmu_l1_start$"

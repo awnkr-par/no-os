@@ -5,6 +5,7 @@ ifeq ($(LLVM),1)
 CC := clang
 OBJCOPY := llvm-objcopy
 OBJDUMP := llvm-objdump
+NM := llvm-nm
 SIZE := size
 ARCHFLAGS := --target=arm-none-eabi -march=armv7-a -marm
 LINKFLAGS := -fuse-ld=lld
@@ -13,6 +14,7 @@ CROSS ?= arm-none-eabi-
 CC := $(CROSS)gcc
 OBJCOPY := $(CROSS)objcopy
 OBJDUMP := $(CROSS)objdump
+NM := $(CROSS)nm
 SIZE := $(CROSS)size
 ARCHFLAGS := -march=armv7-a -marm
 LINKFLAGS :=
@@ -44,13 +46,14 @@ OBJECTS := \
 	$(BUILD)/src/status.o \
 	$(BUILD)/platform/rm915/platform.o
 
-.PHONY: all clean disasm size check-toolchain bootimg verify
+.PHONY: all clean disasm size check-toolchain bootimg verify manifest
 
-all: check-toolchain $(TARGET).elf $(TARGET).bin $(TARGET)-boot.img verify size
+all: check-toolchain $(TARGET).elf $(TARGET).bin $(TARGET)-boot.img verify manifest size
 
 check-toolchain:
 	@command -v $(CC) >/dev/null || { echo "error: $(CC) not found"; exit 1; }
 	@command -v $(OBJCOPY) >/dev/null || { echo "error: $(OBJCOPY) not found"; exit 1; }
+	@command -v $(NM) >/dev/null || { echo "error: $(NM) not found"; exit 1; }
 	@command -v $(PYTHON) >/dev/null || { echo "error: $(PYTHON) not found"; exit 1; }
 
 $(TARGET).elf: $(OBJECTS) linker.ld
@@ -75,6 +78,9 @@ $(BUILD)/arch/arm/%.o: arch/arm/%.S
 
 verify: $(TARGET)-boot.img tools/verify_bootimg.py
 	$(PYTHON) tools/verify_bootimg.py $(TARGET)-boot.img --expect-cmdline "$(BOOT_CMDLINE)"
+
+manifest: $(TARGET).elf $(TARGET).bin $(TARGET)-boot.img tools/build_manifest.py
+	$(PYTHON) tools/build_manifest.py --elf $(TARGET).elf --bin $(TARGET).bin --boot $(TARGET)-boot.img --output $(TARGET)-manifest.json --nm $(NM) --boot-cmdline "$(BOOT_CMDLINE)"
 
 disasm: $(TARGET).elf
 	$(OBJDUMP) -D $< > $(TARGET).lst

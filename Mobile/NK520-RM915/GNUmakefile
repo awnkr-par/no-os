@@ -32,6 +32,7 @@ LDFLAGS := $(ARCHFLAGS) $(LINKFLAGS) -nostdlib -Wl,--gc-sections -Wl,-Map,$(TARG
 
 OBJECTS := \
 	$(BUILD)/arch/arm/start.o \
+	$(BUILD)/arch/arm/context.o \
 	$(BUILD)/src/kernel.o \
 	$(BUILD)/src/boot.o \
 	$(BUILD)/src/bootargs.o \

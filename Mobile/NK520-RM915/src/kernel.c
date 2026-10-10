@@ -4,6 +4,7 @@
 #include <noos/diagnostic.h>
 #include <noos/framebuffer.h>
 #include <noos/heap.h>
+#include <noos/mmu.h>
 #include <noos/panic.h>
 #include <noos/platform.h>
 #include <noos/pmm.h>
@@ -160,6 +161,23 @@ static void log_boot_info(const struct noos_boot_info *info)
     }
 }
 
+static void log_mmu_state(void)
+{
+    const struct mmu_stats *mmu = mmu_get_stats();
+
+    console_write("MMU plan table: ");
+    console_write_hex32(mmu->table_address);
+    console_write("\nmapped 1MiB sections: ");
+    console_write_dec32(mmu->mapped_sections);
+    console_write(" range=");
+    console_write_hex32(mmu->first_mapped_section << 20);
+    console_write("-");
+    console_write_hex32((mmu->last_mapped_section << 20) | 0xFFFFFu);
+    console_write("\nMMU plan validated: ");
+    console_write(mmu->validated ? "yes" : "no");
+    console_write(" (not enabled)\n");
+}
+
 static void log_allocator_state(void)
 {
     const struct pmm_stats *pmm = pmm_get_stats();
@@ -233,6 +251,12 @@ void kernel_main(uint32_t boot_r0, uint32_t machine_type, uint32_t boot_data)
     if (!selftest_ok(tests)) {
         panic("kernel self-test failed");
     }
+
+    if (!mmu_prepare_identity(&info)) {
+        panic("MMU identity-map planning failed");
+    }
+    boot_status_set(NOOS_STAGE_MMU_PLAN, mmu_get_stats()->mapped_sections);
+    log_mmu_state();
 
     if (have_framebuffer) {
         framebuffer_show_runtime(&info, pmm_get_stats(), tests);

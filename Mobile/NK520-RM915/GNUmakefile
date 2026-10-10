@@ -19,6 +19,7 @@ LINKFLAGS :=
 endif
 
 PYTHON ?= python3
+BOOT_CMDLINE ?= lk2nd.pass-simplefb=xrgb8888
 CPPFLAGS := -Iinclude
 CFLAGS := $(ARCHFLAGS) -std=c11 -ffreestanding -fno-builtin -fno-stack-protector -fno-pic -fdata-sections -ffunction-sections -Wall -Wextra -Werror -Os
 ASFLAGS := $(ARCHFLAGS) -ffreestanding -x assembler-with-cpp
@@ -58,7 +59,7 @@ $(TARGET).bin: $(TARGET).elf
 	$(OBJCOPY) -O binary $< $@
 
 $(TARGET)-boot.img: $(TARGET).bin tools/mkbootimg.py
-	$(PYTHON) tools/mkbootimg.py $< $@
+	$(PYTHON) tools/mkbootimg.py $< $@ --cmdline "$(BOOT_CMDLINE)"
 
 bootimg: $(TARGET)-boot.img
 
@@ -71,7 +72,7 @@ $(BUILD)/arch/arm/%.o: arch/arm/%.S
 	$(CC) $(CPPFLAGS) $(ASFLAGS) -c $< -o $@
 
 verify: $(TARGET)-boot.img tools/verify_bootimg.py
-	$(PYTHON) tools/verify_bootimg.py $(TARGET)-boot.img
+	$(PYTHON) tools/verify_bootimg.py $(TARGET)-boot.img --expect-cmdline "$(BOOT_CMDLINE)"
 
 disasm: $(TARGET).elf
 	$(OBJDUMP) -D $< > $(TARGET).lst

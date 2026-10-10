@@ -6,7 +6,10 @@
 extern uint8_t __image_start[];
 extern uint8_t __image_end[];
 
-static uint8_t g_bitmap[NOOS_PMM_MAX_PAGES / 8u];
+#define PMM_BITMAP_BYTES (NOOS_PMM_MAX_PAGES / 8u)
+
+static uint8_t g_used_bitmap[PMM_BITMAP_BYTES];
+static uint8_t g_permanent_bitmap[PMM_BITMAP_BYTES];
 static struct pmm_stats g_stats;
 static bool g_ready;
 
@@ -30,51 +33,63 @@ static bool page_index(uint32_t address, uint32_t *index)
     return *index < g_stats.total_pages;
 }
 
-static bool bit_is_used(uint32_t index)
+static bool bitmap_test(const uint8_t *bitmap, uint32_t index)
 {
-    return (g_bitmap[index >> 3] & (uint8_t)(1u << (index & 7u))) != 0;
+    return (bitmap[index >> 3] & (uint8_t)(1u << (index & 7u))) != 0;
 }
 
-static void bit_set_used(uint32_t index)
+static void bitmap_set(uint8_t *bitmap, uint32_t index)
 {
-    g_bitmap[index >> 3] |= (uint8_t)(1u << (index & 7u));
+    bitmap[index >> 3] |= (uint8_t)(1u << (index & 7u));
 }
 
-static void bit_set_free(uint32_t index)
+static void bitmap_clear(uint8_t *bitmap, uint32_t index)
 {
-    g_bitmap[index >> 3] &= (uint8_t)~(1u << (index & 7u));
+    bitmap[index >> 3] &= (uint8_t)~(1u << (index & 7u));
 }
 
-static bool mark_page_free(uint32_t address)
+static bool page_used(uint32_t index)
+{
+    return bitmap_test(g_used_bitmap, index);
+}
+
+static bool page_permanent(uint32_t index)
+{
+    return bitmap_test(g_permanent_bitmap, index);
+}
+
+static void expose_usable_page(uint32_t address)
 {
     uint32_t index;
     if (!page_index(address, &index)) {
-        return false;
+        return;
     }
 
-    if (bit_is_used(index)) {
-        bit_set_free(index);
-        g_stats.free_pages++;
+    if (page_used(index)) {
+        bitmap_clear(g_used_bitmap, index);
         g_stats.usable_pages++;
+        g_stats.free_pages++;
     }
-    return true;
 }
 
-static bool mark_page_used(uint32_t address)
+static void reserve_page_permanently(uint32_t address)
 {
     uint32_t index;
     if (!page_index(address, &index)) {
-        return false;
+        return;
     }
 
-    if (!bit_is_used(index)) {
-        bit_set_used(index);
+    if (!page_permanent(index)) {
+        bitmap_set(g_permanent_bitmap, index);
+        g_stats.permanent_pages++;
+    }
+
+    if (!page_used(index)) {
+        bitmap_set(g_used_bitmap, index);
         if (g_stats.free_pages != 0) {
             g_stats.free_pages--;
         }
-        g_stats.reserved_pages++;
     }
-    return true;
 }
 
 bool pmm_reserve_range(uint32_t start, uint32_t size)
@@ -83,11 +98,12 @@ bool pmm_reserve_range(uint32_t start, uint32_t size)
         return false;
     }
 
-    uint32_t first = align_down(start);
-    uint32_t end_raw = start + size;
+    const uint32_t end_raw = start + size;
     if (end_raw < start) {
         return false;
     }
+
+    uint32_t first = align_down(start);
     uint32_t end = align_up(end_raw);
 
     if (end <= g_stats.region_start || first >= g_stats.region_end) {
@@ -102,7 +118,7 @@ bool pmm_reserve_range(uint32_t start, uint32_t size)
     }
 
     for (uint32_t addr = first; addr < end; addr += NOOS_PAGE_SIZE) {
-        mark_page_used(addr);
+        reserve_page_permanently(addr);
     }
     return true;
 }
@@ -110,7 +126,8 @@ bool pmm_reserve_range(uint32_t start, uint32_t size)
 bool pmm_init(const struct noos_boot_info *boot)
 {
     memset(&g_stats, 0, sizeof(g_stats));
-    memset(g_bitmap, 0xFF, sizeof(g_bitmap));
+    memset(g_used_bitmap, 0xFF, sizeof(g_used_bitmap));
+    memset(g_permanent_bitmap, 0x00, sizeof(g_permanent_bitmap));
     g_ready = false;
 
     if (boot == 0 || boot->memory_bank_count == 0) {
@@ -152,12 +169,13 @@ bool pmm_init(const struct noos_boot_info *boot)
     g_ready = true;
 
     for (uint32_t i = 0; i < boot->memory_bank_count; ++i) {
-        uint32_t start = align_up(boot->memory_banks[i].start);
-        const uint32_t raw_end = boot->memory_banks[i].start + boot->memory_banks[i].size;
+        const uint32_t raw_start = boot->memory_banks[i].start;
+        const uint32_t raw_end = raw_start + boot->memory_banks[i].size;
+        const uint32_t start = align_up(raw_start);
         const uint32_t end = align_down(raw_end);
 
         for (uint32_t addr = start; addr < end; addr += NOOS_PAGE_SIZE) {
-            mark_page_free(addr);
+            expose_usable_page(addr);
         }
     }
 
@@ -179,14 +197,14 @@ void *pmm_alloc_page(void)
     }
 
     for (uint32_t pass = 0; pass < 2; ++pass) {
-        uint32_t begin = pass == 0 ? g_stats.allocation_hint : 0;
-        uint32_t end = pass == 0 ? g_stats.total_pages : g_stats.allocation_hint;
+        const uint32_t begin = pass == 0 ? g_stats.allocation_hint : 0;
+        const uint32_t end = pass == 0 ? g_stats.total_pages : g_stats.allocation_hint;
 
         for (uint32_t index = begin; index < end; ++index) {
-            if (!bit_is_used(index)) {
-                bit_set_used(index);
+            if (!page_used(index)) {
+                bitmap_set(g_used_bitmap, index);
                 g_stats.free_pages--;
-                g_stats.reserved_pages++;
+                g_stats.allocated_pages++;
                 g_stats.allocation_hint = index + 1u;
                 return (void *)(uintptr_t)(g_stats.region_start + index * NOOS_PAGE_SIZE);
             }
@@ -201,18 +219,15 @@ bool pmm_free_page(void *page)
     const uint32_t address = (uint32_t)(uintptr_t)page;
     uint32_t index;
 
-    if (!g_ready || (address & (NOOS_PAGE_SIZE - 1u)) != 0 || !page_index(address, &index)) {
+    if (!g_ready || (address & (NOOS_PAGE_SIZE - 1u)) != 0 ||
+        !page_index(address, &index) || !page_used(index) || page_permanent(index)) {
         return false;
     }
 
-    if (!bit_is_used(index)) {
-        return false;
-    }
-
-    bit_set_free(index);
+    bitmap_clear(g_used_bitmap, index);
     g_stats.free_pages++;
-    if (g_stats.reserved_pages != 0) {
-        g_stats.reserved_pages--;
+    if (g_stats.allocated_pages != 0) {
+        g_stats.allocated_pages--;
     }
 
     if (index < g_stats.allocation_hint) {
@@ -227,7 +242,7 @@ bool pmm_page_is_free(uint32_t address)
     if (!g_ready || !page_index(align_down(address), &index)) {
         return false;
     }
-    return !bit_is_used(index);
+    return !page_used(index);
 }
 
 const struct pmm_stats *pmm_get_stats(void)

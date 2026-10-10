@@ -5,6 +5,23 @@
 static char g_early_log[EARLY_LOG_CAPACITY];
 static size_t g_early_log_length;
 
+static uint32_t divmod10(uint32_t value, uint32_t *remainder)
+{
+    uint32_t quotient = 0;
+    uint32_t rem = 0;
+
+    for (int bit = 31; bit >= 0; --bit) {
+        rem = (rem << 1) | ((value >> (uint32_t)bit) & 1u);
+        if (rem >= 10u) {
+            rem -= 10u;
+            quotient |= 1u << (uint32_t)bit;
+        }
+    }
+
+    *remainder = rem;
+    return quotient;
+}
+
 void console_init(void)
 {
     g_early_log_length = 0;
@@ -53,8 +70,9 @@ void console_write_dec32(uint32_t value)
     }
 
     while (value != 0 && length < sizeof(buffer)) {
-        buffer[length++] = (char)('0' + (value % 10u));
-        value /= 10u;
+        uint32_t remainder;
+        value = divmod10(value, &remainder);
+        buffer[length++] = (char)('0' + remainder);
     }
 
     while (length != 0) {

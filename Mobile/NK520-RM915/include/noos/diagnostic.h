@@ -2,15 +2,18 @@
 #define NOOS_DIAGNOSTIC_H
 
 #include <noos/boot.h>
+#include <noos/bootargs.h>
 #include <noos/cpu.h>
+#include <noos/klog.h>
 #include <noos/mmu.h>
 #include <noos/pmm.h>
+#include <noos/scheduler.h>
 #include <noos/selftest.h>
 #include <noos/uartdm.h>
 #include <stdint.h>
 
 #define NOOS_DIAG_MAGIC 0x4E444941u
-#define NOOS_DIAG_VERSION 3u
+#define NOOS_DIAG_VERSION 4u
 #define NOOS_DIAG_PANIC_BYTES 64u
 #define NOOS_DIAG_LOG_BYTES 256u
 
@@ -28,6 +31,9 @@ struct noos_diagnostic_record {
     uint32_t boot_data_size;
     uint32_t total_memory_bytes;
     uint32_t reserved_range_count;
+
+    uint32_t boot_option_flags;
+    uint32_t boot_log_level;
 
     uint32_t cpu_midr;
     uint32_t cpu_cpsr;
@@ -58,6 +64,17 @@ struct noos_diagnostic_record {
     uint32_t selftests_passed;
     uint32_t selftests_failed;
 
+    uint32_t klog_bytes_written;
+    uint32_t klog_bytes_overwritten;
+    uint32_t klog_wraps;
+    uint32_t klog_length;
+
+    uint32_t scheduler_ticks;
+    uint32_t scheduler_tasks;
+    uint32_t scheduler_ready;
+    uint32_t scheduler_sleeping;
+    uint32_t scheduler_switches_planned;
+
     char panic_reason[NOOS_DIAG_PANIC_BYTES];
     char log_tail[NOOS_DIAG_LOG_BYTES];
 };
@@ -65,11 +82,13 @@ struct noos_diagnostic_record {
 void diagnostic_init(void);
 void diagnostic_set_stage(uint32_t stage, uint32_t detail);
 void diagnostic_capture_boot(const struct noos_boot_info *boot);
+void diagnostic_capture_boot_options(const struct noos_boot_options *options);
 void diagnostic_capture_cpu(const struct cpu_state *cpu);
 void diagnostic_capture_pmm(const struct pmm_stats *pmm);
 void diagnostic_capture_mmu(const struct mmu_stats *mmu);
 void diagnostic_capture_uart(const struct uartdm_stats *uart);
 void diagnostic_capture_selftest(struct selftest_result result);
+void diagnostic_capture_scheduler(const struct scheduler_stats *scheduler);
 void diagnostic_capture_panic(const char *reason);
 void diagnostic_capture_console(void);
 const struct noos_diagnostic_record *diagnostic_get(void);

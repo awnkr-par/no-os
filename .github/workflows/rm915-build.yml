@@ -10,6 +10,7 @@ on:
     paths:
       - "Mobile/NK520-RM915/**"
       - ".github/workflows/rm915-build.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -28,10 +29,25 @@ jobs:
       - name: Install ARM bare-metal toolchain
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-arm-none-eabi binutils-arm-none-eabi
+          sudo apt-get install -y gcc-arm-none-eabi binutils-arm-none-eabi file
 
       - name: Build noOS RM-915
         run: make -f GNUmakefile
+
+      - name: Verify ELF architecture and entrypoint
+        run: |
+          arm-none-eabi-readelf -h build/noos.elf
+          arm-none-eabi-readelf -h build/noos.elf | grep -q "Machine:.*ARM"
+          arm-none-eabi-readelf -h build/noos.elf | grep -qi "Entry point address:.*0x80208000"
+
+      - name: Verify required kernel symbols
+        run: |
+          arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]_start$"
+          arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]exception_handle$"
+          arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]pmm_init$"
+          arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]pmm_alloc_page$"
+          arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]kmalloc$"
+          arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]selftest_run$"
 
       - name: Inspect artifacts
         run: |
@@ -40,13 +56,22 @@ jobs:
           test -s build/noos.elf
           test -s build/noos.bin
           test -s build/noos-boot.img
+          test -s build/noos.map
+
+      - name: Verify generated boot image
+        run: python3 tools/verify_bootimg.py build/noos-boot.img
+
+      - name: Save disassembly
+        run: make -f GNUmakefile disasm
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: noos-rm915
+          if-no-files-found: error
           path: |
             Mobile/NK520-RM915/build/noos.elf
             Mobile/NK520-RM915/build/noos.bin
             Mobile/NK520-RM915/build/noos-boot.img
             Mobile/NK520-RM915/build/noos.map
+            Mobile/NK520-RM915/build/noos.lst

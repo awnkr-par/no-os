@@ -16,6 +16,7 @@ SECTIONS
     .text ALIGN(4) :
     {
         *(.text.boot)
+        KEEP(*(.text.context_switch))
         *(.text .text.*)
     }
 

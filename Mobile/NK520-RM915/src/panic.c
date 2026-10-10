@@ -3,6 +3,7 @@
 #include <noos/framebuffer.h>
 #include <noos/panic.h>
 #include <noos/status.h>
+#include <noos/uartdm.h>
 
 static const char *g_panic_reason;
 
@@ -26,6 +27,7 @@ _Noreturn void panic(const char *reason)
     console_write("PANIC: ");
     console_write(reason != 0 ? reason : "(no reason)");
     console_write("\n");
+    diagnostic_capture_uart(uartdm_get_stats());
     diagnostic_capture_panic(reason != 0 ? reason : "(no reason)");
 
     if (framebuffer_available()) {

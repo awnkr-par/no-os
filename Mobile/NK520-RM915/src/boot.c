@@ -12,10 +12,28 @@ struct atag_mem32 {
     uint32_t start;
 };
 
+struct atag_videolfb {
+    uint16_t width;
+    uint16_t height;
+    uint16_t depth;
+    uint16_t line_length;
+    uint32_t base;
+    uint32_t size;
+    uint8_t red_size;
+    uint8_t red_pos;
+    uint8_t green_size;
+    uint8_t green_pos;
+    uint8_t blue_size;
+    uint8_t blue_pos;
+    uint8_t reserved_size;
+    uint8_t reserved_pos;
+};
+
 struct atag {
     struct atag_header hdr;
     union {
         struct atag_mem32 mem;
+        struct atag_videolfb videolfb;
         char cmdline[1];
     } u;
 };
@@ -49,6 +67,25 @@ static void add_memory_bank(struct noos_boot_info *info, uint32_t start, uint32_
     }
 }
 
+static enum noos_pixel_format atag_video_format(const struct atag_videolfb *video)
+{
+    if (video->depth == 16 &&
+        video->red_size == 5 && video->red_pos == 11 &&
+        video->green_size == 6 && video->green_pos == 5 &&
+        video->blue_size == 5 && video->blue_pos == 0) {
+        return NOOS_PIXEL_RGB565;
+    }
+
+    if (video->depth == 32 &&
+        video->red_size == 8 && video->red_pos == 16 &&
+        video->green_size == 8 && video->green_pos == 8 &&
+        video->blue_size == 8 && video->blue_pos == 0) {
+        return video->reserved_size == 8 ? NOOS_PIXEL_ARGB8888 : NOOS_PIXEL_XRGB8888;
+    }
+
+    return NOOS_PIXEL_UNKNOWN;
+}
+
 static bool parse_atags(struct noos_boot_info *info, uint32_t address)
 {
     if (!boot_pointer_plausible(address)) {
@@ -74,6 +111,20 @@ static bool parse_atags(struct noos_boot_info *info, uint32_t address)
         case NOOS_ATAG_MEM:
             if (tag->hdr.size >= 4) {
                 add_memory_bank(info, tag->u.mem.start, tag->u.mem.size);
+            }
+            break;
+        case NOOS_ATAG_VIDEOLFB:
+            if (tag->hdr.size >= 8) {
+                const enum noos_pixel_format format = atag_video_format(&tag->u.videolfb);
+                if (format != NOOS_PIXEL_UNKNOWN) {
+                    info->framebuffer.address = tag->u.videolfb.base;
+                    info->framebuffer.size = tag->u.videolfb.size;
+                    info->framebuffer.width = tag->u.videolfb.width;
+                    info->framebuffer.height = tag->u.videolfb.height;
+                    info->framebuffer.stride = tag->u.videolfb.line_length;
+                    info->framebuffer.format = format;
+                    info->framebuffer.valid = true;
+                }
             }
             break;
         case NOOS_ATAG_CMDLINE:

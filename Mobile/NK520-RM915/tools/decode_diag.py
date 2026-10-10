@@ -6,8 +6,8 @@ import struct
 from pathlib import Path
 
 MAGIC = 0x4E444941
-VERSION = 4
-UINT_COUNT = 45
+VERSION = 5
+UINT_COUNT = 50
 PANIC_BYTES = 64
 LOG_BYTES = 256
 STRUCT_FORMAT = "<" + ("I" * UINT_COUNT) + f"{PANIC_BYTES}s{LOG_BYTES}s"
@@ -31,6 +31,7 @@ FIELDS = [
     "klog_bytes_written", "klog_bytes_overwritten", "klog_wraps", "klog_length",
     "scheduler_ticks", "scheduler_tasks", "scheduler_ready",
     "scheduler_sleeping", "scheduler_switches_planned",
+    "irq_registered", "irq_dispatches", "irq_handled", "irq_spurious", "irq_last",
 ]
 
 STAGES = {
@@ -163,6 +164,12 @@ def print_record(v: dict[str, int | str]) -> None:
         f"ready={v['scheduler_ready']} sleeping={v['scheduler_sleeping']} "
         f"planned={v['scheduler_switches_planned']}"
     )
+    print(
+        "IRQ core:       "
+        f"registered={v['irq_registered']} dispatches={v['irq_dispatches']} "
+        f"handled={v['irq_handled']} spurious={v['irq_spurious']} "
+        f"last={v['irq_last']}"
+    )
     print(f"panic reason:   {v['panic_reason'] or '(none)'}")
     print("--- log tail ---")
     print(v["log_tail"] or "(empty)")
@@ -194,6 +201,11 @@ def make_selftest_record() -> bytes:
     ints[42] = 1
     ints[43] = 1
     ints[44] = 4
+    ints[45] = 1
+    ints[46] = 2
+    ints[47] = 1
+    ints[48] = 1
+    ints[49] = 43
 
     panic = b"".ljust(PANIC_BYTES, b"\0")
     log = b"decoder v4 selftest".ljust(LOG_BYTES, b"\0")
@@ -221,7 +233,9 @@ def main() -> None:
         assert values["boot_option_flags"] == 0xF
         assert values["klog_wraps"] == 2
         assert values["scheduler_tasks"] == 2
-        print("diagnostic decoder v4 selftest: OK")
+        assert values["irq_handled"] == 1
+        assert values["irq_last"] == 43
+        print("diagnostic decoder v5 selftest: OK")
         return
 
     if args.dump is None:

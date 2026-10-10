@@ -109,11 +109,22 @@ uint32_t bootargs_get_u32(const char *command_line, const char *key, uint32_t fa
             return fallback;
         }
 
-        if (digit >= base || result > (UINT32_MAX - digit) / base) {
+        if (digit >= base) {
             return fallback;
         }
 
-        result = result * base + digit;
+        if (base == 10u) {
+            if (result > 429496729u ||
+                (result == 429496729u && digit > 5u)) {
+                return fallback;
+            }
+            result = result * 10u + digit;
+        } else {
+            if (result > 0x0FFFFFFFu) {
+                return fallback;
+            }
+            result = (result << 4) | digit;
+        }
     }
 
     return result;

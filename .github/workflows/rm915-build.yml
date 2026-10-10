@@ -1,0 +1,52 @@
+name: RM915 build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "Mobile/NK520-RM915/**"
+      - ".github/workflows/rm915-build.yml"
+  pull_request:
+    paths:
+      - "Mobile/NK520-RM915/**"
+      - ".github/workflows/rm915-build.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Mobile/NK520-RM915
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install ARM bare-metal toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-arm-none-eabi binutils-arm-none-eabi
+
+      - name: Build noOS RM-915
+        run: make -f GNUmakefile
+
+      - name: Inspect artifacts
+        run: |
+          arm-none-eabi-size build/noos.elf
+          file build/noos.elf build/noos.bin build/noos-boot.img
+          test -s build/noos.elf
+          test -s build/noos.bin
+          test -s build/noos-boot.img
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: noos-rm915
+          path: |
+            Mobile/NK520-RM915/build/noos.elf
+            Mobile/NK520-RM915/build/noos.bin
+            Mobile/NK520-RM915/build/noos-boot.img
+            Mobile/NK520-RM915/build/noos.map

@@ -105,3 +105,6 @@ jobs:
             Mobile/NK520-RM915/build/noos.map
             Mobile/NK520-RM915/build/noos.lst
             Mobile/NK520-RM915/build/noos-manifest.json
+            Mobile/NK520-RM915/build-uart/noos-boot.img
+            Mobile/NK520-RM915/build-uart/noos.elf
+            Mobile/NK520-RM915/build-uart/noos-manifest.json

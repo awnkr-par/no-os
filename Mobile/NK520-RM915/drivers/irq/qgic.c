@@ -21,8 +21,7 @@ static uint32_t g_irq_lines;
 
 static void barrier(void)
 {
-    __asm__ volatile ("dsb sy
-isb" ::: "memory");
+    __asm__ volatile ("dsb sy\n\tisb" ::: "memory");
 }
 
 bool qgic_init(void)

@@ -248,6 +248,13 @@ void kernel_main(uint32_t boot_r0, uint32_t machine_type, uint32_t boot_data)
     boot_status_set(NOOS_STAGE_HEAP, 0);
     log_allocator_state();
 
+    if (!mmu_prepare_identity(&info)) {
+        panic("MMU identity-map planning failed");
+    }
+    diagnostic_capture_mmu(mmu_get_stats());
+    boot_status_set(NOOS_STAGE_MMU_PLAN, mmu_get_stats()->mapped_sections);
+    log_mmu_state();
+
     const struct selftest_result tests = selftest_run(&info);
     diagnostic_capture_selftest(tests);
     boot_status_set(NOOS_STAGE_SELFTEST, tests.failed);
@@ -261,13 +268,6 @@ void kernel_main(uint32_t boot_r0, uint32_t machine_type, uint32_t boot_data)
     if (!selftest_ok(tests)) {
         panic("kernel self-test failed");
     }
-
-    if (!mmu_prepare_identity(&info)) {
-        panic("MMU identity-map planning failed");
-    }
-    diagnostic_capture_mmu(mmu_get_stats());
-    boot_status_set(NOOS_STAGE_MMU_PLAN, mmu_get_stats()->mapped_sections);
-    log_mmu_state();
 
     if (have_framebuffer) {
         framebuffer_show_runtime(&info, pmm_get_stats(), tests);

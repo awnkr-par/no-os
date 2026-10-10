@@ -6,8 +6,8 @@ import struct
 from pathlib import Path
 
 MAGIC = 0x4E444941
-VERSION = 2
-UINT_COUNT = 30
+VERSION = 3
+UINT_COUNT = 34
 PANIC_BYTES = 64
 LOG_BYTES = 256
 STRUCT_FORMAT = "<" + ("I" * UINT_COUNT) + f"{PANIC_BYTES}s{LOG_BYTES}s"
@@ -23,6 +23,7 @@ FIELDS = [
     "pmm_allocated_pages",
     "mmu_table_address", "mmu_mapped_sections", "mmu_first_section",
     "mmu_last_section", "mmu_validated",
+    "uart_base", "uart_bytes_sent", "uart_tx_timeouts", "uart_flags",
     "framebuffer_address", "framebuffer_width", "framebuffer_height",
     "framebuffer_stride", "framebuffer_format",
     "selftests_passed", "selftests_failed",
@@ -122,6 +123,13 @@ def print_record(v: dict[str, int | str]) -> None:
         f"validated={bool(v['mmu_validated'])}"
     )
     print(
+        "UART:           "
+        f"base=0x{int(v['uart_base']):08X} "
+        f"bytes={v['uart_bytes_sent']} timeouts={v['uart_tx_timeouts']} "
+        f"adopted={bool(int(v['uart_flags']) & 1)} "
+        f"healthy={bool(int(v['uart_flags']) & 2)}"
+    )
+    print(
         "framebuffer:    "
         f"0x{int(v['framebuffer_address']):08X} "
         f"{v['framebuffer_width']}x{v['framebuffer_height']} "
@@ -150,7 +158,7 @@ def make_selftest_record() -> bytes:
     ints[18] = 0x80210000
     ints[19] = 512
     ints[22] = 1
-    ints[28] = 8
+    ints[32] = 8
 
     panic = b"".ljust(PANIC_BYTES, b"\0")
     log = b"decoder selftest".ljust(LOG_BYTES, b"\0")

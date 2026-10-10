@@ -4,6 +4,7 @@
 
 static char g_early_log[EARLY_LOG_CAPACITY];
 static size_t g_early_log_length;
+static console_sink_fn g_sink;
 
 static uint32_t divmod10(uint32_t value, uint32_t *remainder)
 {
@@ -26,16 +27,24 @@ void console_init(void)
 {
     g_early_log_length = 0;
     g_early_log[0] = '\0';
+    g_sink = 0;
+}
+
+void console_set_sink(console_sink_fn sink)
+{
+    g_sink = sink;
 }
 
 void console_putc(char c)
 {
-    if (g_early_log_length + 1u >= EARLY_LOG_CAPACITY) {
-        return;
+    if (g_early_log_length + 1u < EARLY_LOG_CAPACITY) {
+        g_early_log[g_early_log_length++] = c;
+        g_early_log[g_early_log_length] = '\0';
     }
 
-    g_early_log[g_early_log_length++] = c;
-    g_early_log[g_early_log_length] = '\0';
+    if (g_sink != 0) {
+        g_sink(c);
+    }
 }
 
 void console_write(const char *text)

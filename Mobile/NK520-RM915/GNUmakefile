@@ -22,7 +22,8 @@ endif
 
 PYTHON ?= python3
 BOOT_CMDLINE ?= lk2nd.pass-simplefb=xrgb8888
-CPPFLAGS := -Iinclude
+UARTDM_HANDOFF ?= 0
+CPPFLAGS := -Iinclude -DNOOS_UARTDM_HANDOFF=$(UARTDM_HANDOFF)
 CFLAGS := $(ARCHFLAGS) -std=c11 -ffreestanding -fno-builtin -fno-stack-protector -fno-pic -fdata-sections -ffunction-sections -Wall -Wextra -Werror -Os
 ASFLAGS := $(ARCHFLAGS) -ffreestanding -x assembler-with-cpp
 LDFLAGS := $(ARCHFLAGS) $(LINKFLAGS) -nostdlib -Wl,--gc-sections -Wl,-Map,$(TARGET).map -T linker.ld
@@ -44,6 +45,7 @@ OBJECTS := \
 	$(BUILD)/src/pmm.o \
 	$(BUILD)/src/selftest.o \
 	$(BUILD)/src/status.o \
+	$(BUILD)/drivers/uart/uartdm.o \
 	$(BUILD)/platform/rm915/platform.o
 
 .PHONY: all clean disasm size check-toolchain bootimg verify manifest

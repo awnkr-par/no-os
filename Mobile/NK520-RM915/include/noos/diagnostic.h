@@ -6,10 +6,11 @@
 #include <noos/mmu.h>
 #include <noos/pmm.h>
 #include <noos/selftest.h>
+#include <noos/uartdm.h>
 #include <stdint.h>
 
 #define NOOS_DIAG_MAGIC 0x4E444941u
-#define NOOS_DIAG_VERSION 2u
+#define NOOS_DIAG_VERSION 3u
 #define NOOS_DIAG_PANIC_BYTES 64u
 #define NOOS_DIAG_LOG_BYTES 256u
 
@@ -43,6 +44,11 @@ struct noos_diagnostic_record {
     uint32_t mmu_last_section;
     uint32_t mmu_validated;
 
+    uint32_t uart_base;
+    uint32_t uart_bytes_sent;
+    uint32_t uart_tx_timeouts;
+    uint32_t uart_flags;
+
     uint32_t framebuffer_address;
     uint32_t framebuffer_width;
     uint32_t framebuffer_height;
@@ -62,6 +68,7 @@ void diagnostic_capture_boot(const struct noos_boot_info *boot);
 void diagnostic_capture_cpu(const struct cpu_state *cpu);
 void diagnostic_capture_pmm(const struct pmm_stats *pmm);
 void diagnostic_capture_mmu(const struct mmu_stats *mmu);
+void diagnostic_capture_uart(const struct uartdm_stats *uart);
 void diagnostic_capture_selftest(struct selftest_result result);
 void diagnostic_capture_panic(const char *reason);
 void diagnostic_capture_console(void);

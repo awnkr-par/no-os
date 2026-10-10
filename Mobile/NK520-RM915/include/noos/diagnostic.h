@@ -16,7 +16,7 @@
 #include <stdint.h>
 
 #define NOOS_DIAG_MAGIC 0x4E444941u
-#define NOOS_DIAG_VERSION 6u
+#define NOOS_DIAG_VERSION 7u
 #define NOOS_DIAG_PANIC_BYTES 64u
 #define NOOS_DIAG_LOG_BYTES 256u
 
@@ -77,6 +77,8 @@ struct noos_diagnostic_record {
     uint32_t scheduler_ready;
     uint32_t scheduler_sleeping;
     uint32_t scheduler_switches_planned;
+    uint32_t scheduler_reschedule_requests;
+    uint32_t scheduler_context_switches;
 
     uint32_t irq_registered;
     uint32_t irq_dispatches;

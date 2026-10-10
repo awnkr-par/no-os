@@ -46,11 +46,21 @@ jobs:
           arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]exception_handle$"
           arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]pmm_init$"
           arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]pmm_alloc_page$"
+          arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]pmm_page_is_permanent$"
+          arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]boot_add_reserved_range$"
           arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]kmalloc$"
           arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]selftest_run$"
           arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]fdt_parse_boot_info$"
           arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]framebuffer_show_boot_splash$"
           arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]boot_status_set$"
+          arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]diagnostic_get$"
+          arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]__diag_start$"
+          arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]__diag_end$"
+
+      - name: Verify diagnostic section
+        run: |
+          arm-none-eabi-objdump -h build/noos.elf | grep -q ".noos_diag"
+          arm-none-eabi-readelf -S build/noos.elf | grep -q ".noos_diag"
 
       - name: Inspect artifacts
         run: |
@@ -62,7 +72,7 @@ jobs:
           test -s build/noos.map
 
       - name: Verify generated boot image
-        run: python3 tools/verify_bootimg.py build/noos-boot.img
+        run: make -f GNUmakefile verify
 
       - name: Save disassembly
         run: make -f GNUmakefile disasm

@@ -67,6 +67,15 @@ jobs:
           arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]__diag_start$"
           arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]__diag_end$"
 
+      - name: Verify fully freestanding ELF
+        run: |
+          UNDEFINED="$(arm-none-eabi-nm -u build/noos.elf)"
+          if [ -n "$UNDEFINED" ]; then
+            echo "unexpected undefined symbols:"
+            echo "$UNDEFINED"
+            exit 1
+          fi
+
       - name: Verify diagnostic and MMU sections
         run: |
           arm-none-eabi-objdump -h build/noos.elf | grep -q ".noos_diag"

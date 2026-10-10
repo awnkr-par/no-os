@@ -42,6 +42,7 @@ OBJECTS := \
 	$(BUILD)/src/fdt.o \
 	$(BUILD)/src/framebuffer.o \
 	$(BUILD)/src/heap.o \
+	$(BUILD)/src/irq.o \
 	$(BUILD)/src/klog.o \
 	$(BUILD)/src/memory.o \
 	$(BUILD)/src/mmu.o \

@@ -82,7 +82,7 @@ verify: $(TARGET)-boot.img tools/verify_bootimg.py
 	$(PYTHON) tools/verify_bootimg.py $(TARGET)-boot.img --expect-cmdline "$(BOOT_CMDLINE)"
 
 manifest: $(TARGET).elf $(TARGET).bin $(TARGET)-boot.img tools/build_manifest.py
-	$(PYTHON) tools/build_manifest.py --elf $(TARGET).elf --bin $(TARGET).bin --boot $(TARGET)-boot.img --output $(TARGET)-manifest.json --nm $(NM) --boot-cmdline "$(BOOT_CMDLINE)"
+	$(PYTHON) tools/build_manifest.py --elf $(TARGET).elf --bin $(TARGET).bin --boot $(TARGET)-boot.img --output $(TARGET)-manifest.json --nm $(NM) --boot-cmdline "$(BOOT_CMDLINE)" --uartdm-handoff $(UARTDM_HANDOFF)
 
 disasm: $(TARGET).elf
 	$(OBJDUMP) -D $< > $(TARGET).lst

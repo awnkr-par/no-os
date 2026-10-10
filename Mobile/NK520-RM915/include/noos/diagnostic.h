@@ -4,6 +4,7 @@
 #include <noos/boot.h>
 #include <noos/bootargs.h>
 #include <noos/cpu.h>
+#include <noos/irq.h>
 #include <noos/klog.h>
 #include <noos/mmu.h>
 #include <noos/pmm.h>
@@ -13,7 +14,7 @@
 #include <stdint.h>
 
 #define NOOS_DIAG_MAGIC 0x4E444941u
-#define NOOS_DIAG_VERSION 4u
+#define NOOS_DIAG_VERSION 5u
 #define NOOS_DIAG_PANIC_BYTES 64u
 #define NOOS_DIAG_LOG_BYTES 256u
 
@@ -75,6 +76,12 @@ struct noos_diagnostic_record {
     uint32_t scheduler_sleeping;
     uint32_t scheduler_switches_planned;
 
+    uint32_t irq_registered;
+    uint32_t irq_dispatches;
+    uint32_t irq_handled;
+    uint32_t irq_spurious;
+    uint32_t irq_last;
+
     char panic_reason[NOOS_DIAG_PANIC_BYTES];
     char log_tail[NOOS_DIAG_LOG_BYTES];
 };
@@ -89,6 +96,7 @@ void diagnostic_capture_mmu(const struct mmu_stats *mmu);
 void diagnostic_capture_uart(const struct uartdm_stats *uart);
 void diagnostic_capture_selftest(struct selftest_result result);
 void diagnostic_capture_scheduler(const struct scheduler_stats *scheduler);
+void diagnostic_capture_irq(const struct irq_stats *irq);
 void diagnostic_capture_panic(const char *reason);
 void diagnostic_capture_console(void);
 const struct noos_diagnostic_record *diagnostic_get(void);

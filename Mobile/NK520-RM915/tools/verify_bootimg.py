@@ -14,9 +14,15 @@ HEADER_FORMAT = "<8s10I16s512s32s1024s"
 HEADER_SIZE = struct.calcsize(HEADER_FORMAT)
 
 
+def decode_cmdline(primary: bytes, extra: bytes) -> str:
+    raw = primary.split(b"\0", 1)[0] + extra.split(b"\0", 1)[0]
+    return raw.decode("ascii", "strict")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("image", type=Path)
+    ap.add_argument("--expect-cmdline", default=None)
     args = ap.parse_args()
 
     data = args.image.read_bytes()
@@ -30,6 +36,7 @@ def main() -> None:
     ramdisk_size = fields[3]
     tags_addr = fields[7]
     page_size = fields[8]
+    cmdline = decode_cmdline(fields[12], fields[14])
 
     problems: list[str] = []
 
@@ -45,6 +52,8 @@ def main() -> None:
         problems.append("kernel payload is empty")
     if ramdisk_size != 0:
         problems.append("unexpected ramdisk payload")
+    if args.expect_cmdline is not None and cmdline != args.expect_cmdline:
+        problems.append(f"cmdline {cmdline!r} != {args.expect_cmdline!r}")
 
     kernel_offset = page_size
     kernel_end = kernel_offset + kernel_size
@@ -61,6 +70,7 @@ def main() -> None:
     print(f"kernel addr: 0x{kernel_addr:08x}")
     print(f"tags addr:   0x{tags_addr:08x}")
     print(f"page size:   {page_size}")
+    print(f"cmdline:     {cmdline}")
 
 
 if __name__ == "__main__":

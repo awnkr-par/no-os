@@ -65,3 +65,24 @@ Before a new physical address or magic register value is allowed into an executi
 3. isolate writes behind an explicit bring-up feature until tested;
 4. add a compile-time/runtime validator or self-test when the value can be derived;
 5. keep the default image on the least-invasive path until hardware testing confirms the change.
+
+
+## Lumia/MSM8x27 Linux kernel cross-check
+
+Interrupt and live-timer bring-up values were additionally cross-checked against:
+
+- repository: `Android4Lumia/android_kernel_nokia_msm8x27`
+- branch: `cm-13.0`
+- observed source commit in GitHub results: `28fe134696ce748ddaaf3633d3e345d3509276bd`
+
+Relevant files:
+
+| File | What noOS derives from it |
+| --- | --- |
+| `arch/arm/mach-msm/include/mach/msm_iomap-8960.h` | QGIC distributor `0x02000000`, CPU interface `0x02002000`, timer block `0x0200A000` |
+| `arch/arm/mach-msm/include/mach/irqs-8960.h` | `INT_DEBUG_TIMER_EXP = GIC_PPI_START + 1 = 17` |
+| `arch/arm/mach-msm/timer.c` | DGT base `+0x24`, match/count/enable/clear layout, divider value 3, first-boot clear sequence, edge-rising timer IRQ use |
+| `arch/arm/include/asm/hardware/gic.h` | GIC CPU/distributor register offsets |
+| `arch/arm/common/gic.c` | INTACK/EOI flow, PPI enable/disable model, CPU priority mask, distributor/CPU interface enable sequence |
+
+The live QGIC/DGT path remains opt-in with `noos.timer-irq=1`.

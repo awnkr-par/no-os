@@ -235,7 +235,7 @@ void kernel_main(uint32_t boot_r0, uint32_t machine_type, uint32_t boot_data)
     }
 
     if (have_framebuffer) {
-        framebuffer_show_boot_splash(true);
+        framebuffer_show_runtime(&info, pmm_get_stats(), tests);
     }
 
     log_allocator_state();

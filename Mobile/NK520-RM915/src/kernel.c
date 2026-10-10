@@ -232,6 +232,7 @@ void kernel_main(uint32_t boot_r0, uint32_t machine_type, uint32_t boot_data)
 
     struct noos_boot_options options;
     bootargs_parse(&options, info.command_line);
+    diagnostic_capture_boot_options(&options);
     console_printf("boot options: splash=%s selftest=%s mmu-plan=%s sched-test=%s loglevel=%u\n",
                    options.splash ? "on" : "off",
                    options.selftest ? "on" : "off",
@@ -294,6 +295,7 @@ void kernel_main(uint32_t boot_r0, uint32_t machine_type, uint32_t boot_data)
     log_allocator_state();
     diagnostic_capture_pmm(pmm_get_stats());
     diagnostic_capture_uart(uartdm_get_stats());
+    diagnostic_capture_scheduler(scheduler_get_stats());
     const struct klog_stats *log_stats = klog_get_stats();
     console_printf("klog: bytes=%u wraps=%u overwritten=%u retained=%u\n",
                    log_stats->bytes_written, log_stats->wraps,

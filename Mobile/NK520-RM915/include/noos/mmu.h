@@ -12,6 +12,7 @@ struct mmu_stats {
     uint32_t table_address;
     uint32_t mapped_sections;
     uint32_t ram_sections;
+    uint32_t device_sections;
     uint32_t first_mapped_section;
     uint32_t last_mapped_section;
     bool prepared;
@@ -21,6 +22,7 @@ struct mmu_stats {
 bool mmu_prepare_identity(const struct noos_boot_info *boot);
 bool mmu_validate_identity(const struct noos_boot_info *boot);
 uint32_t mmu_l1_descriptor(uint32_t virtual_address);
+bool mmu_descriptor_is_device(uint32_t descriptor);
 const struct mmu_stats *mmu_get_stats(void);
 
 #endif

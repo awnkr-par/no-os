@@ -219,6 +219,35 @@ void framebuffer_draw_hex32(uint32_t x, uint32_t y, uint32_t value, uint32_t rgb
     framebuffer_draw_text(x, y, text, rgb, scale);
 }
 
+void framebuffer_show_booting(void)
+{
+    if (!g_available) {
+        return;
+    }
+
+    framebuffer_clear(0x101820u);
+
+    const uint32_t band_height = g_fb.height / 8u;
+    framebuffer_fill_rect(0, 0, g_fb.width, band_height, 0x26364Au);
+    framebuffer_fill_rect(0, g_fb.height - band_height, g_fb.width, band_height,
+                          0x334155u);
+
+    uint32_t scale = g_fb.width / 90u;
+    if (scale < 2u) {
+        scale = 2u;
+    }
+    if (scale > 6u) {
+        scale = 6u;
+    }
+
+    framebuffer_draw_text(g_fb.width / 12u, g_fb.height / 3u,
+                          "NOOS", 0xF8FAFCu, scale + 1u);
+    framebuffer_draw_text(g_fb.width / 12u, g_fb.height / 2u,
+                          "RM-915", 0xCBD5E1u, scale);
+    framebuffer_draw_text(g_fb.width / 12u, (g_fb.height * 2u) / 3u,
+                          "BOOT", 0xFDE68Au, scale);
+}
+
 void framebuffer_show_boot_splash(bool selftests_ok)
 {
     if (!g_available) {

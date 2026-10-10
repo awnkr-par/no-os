@@ -16,6 +16,26 @@ permissions:
   contents: read
 
 jobs:
+  host-core:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Mobile/NK520-RM915
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Build host core tests
+        run: |
+          cc -Iinclude -std=c11 -Wall -Wextra -Werror -fno-builtin \
+            tests/host_core.c \
+            src/bootargs.c src/klog.c src/scheduler.c src/irq.c src/memory.c \
+            -o /tmp/noos-host-core
+
+      - name: Run host core tests
+        run: /tmp/noos-host-core
+
   build:
     runs-on: ubuntu-latest
     defaults:

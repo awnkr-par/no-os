@@ -3,12 +3,13 @@
 
 #include <noos/boot.h>
 #include <noos/cpu.h>
+#include <noos/mmu.h>
 #include <noos/pmm.h>
 #include <noos/selftest.h>
 #include <stdint.h>
 
 #define NOOS_DIAG_MAGIC 0x4E444941u
-#define NOOS_DIAG_VERSION 1u
+#define NOOS_DIAG_VERSION 2u
 #define NOOS_DIAG_PANIC_BYTES 64u
 #define NOOS_DIAG_LOG_BYTES 256u
 
@@ -36,6 +37,12 @@ struct noos_diagnostic_record {
     uint32_t pmm_permanent_pages;
     uint32_t pmm_allocated_pages;
 
+    uint32_t mmu_table_address;
+    uint32_t mmu_mapped_sections;
+    uint32_t mmu_first_section;
+    uint32_t mmu_last_section;
+    uint32_t mmu_validated;
+
     uint32_t framebuffer_address;
     uint32_t framebuffer_width;
     uint32_t framebuffer_height;
@@ -54,6 +61,7 @@ void diagnostic_set_stage(uint32_t stage, uint32_t detail);
 void diagnostic_capture_boot(const struct noos_boot_info *boot);
 void diagnostic_capture_cpu(const struct cpu_state *cpu);
 void diagnostic_capture_pmm(const struct pmm_stats *pmm);
+void diagnostic_capture_mmu(const struct mmu_stats *mmu);
 void diagnostic_capture_selftest(struct selftest_result result);
 void diagnostic_capture_panic(const char *reason);
 void diagnostic_capture_console(void);

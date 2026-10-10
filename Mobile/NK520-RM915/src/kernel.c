@@ -62,14 +62,16 @@ static void log_allocator_state(void)
     console_write_hex32(pmm->region_start);
     console_write(" - ");
     console_write_hex32(pmm->region_end);
-    console_write("\nPMM pages total/usable/free/reserved: ");
+    console_write("\nPMM pages total/usable/free/permanent/allocated: ");
     console_write_dec32(pmm->total_pages);
     console_write("/");
     console_write_dec32(pmm->usable_pages);
     console_write("/");
     console_write_dec32(pmm->free_pages);
     console_write("/");
-    console_write_dec32(pmm->reserved_pages);
+    console_write_dec32(pmm->permanent_pages);
+    console_write("/");
+    console_write_dec32(pmm->allocated_pages);
     console_write("\nheap pages: ");
     console_write_dec32(heap->pages_owned);
     console_write(" requested bytes: ");

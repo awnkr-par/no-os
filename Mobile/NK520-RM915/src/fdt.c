@@ -28,6 +28,10 @@ struct node_state {
     bool memory_name;
     bool memory_type;
     bool simplefb;
+    bool reserved_container;
+    bool reserved_child;
+    uint32_t child_address_cells;
+    uint32_t child_size_cells;
     uint32_t reg_address;
     uint32_t reg_size;
     uint32_t width;
@@ -43,6 +47,16 @@ static uint32_t be32(const void *ptr)
            ((uint32_t)p[1] << 16) |
            ((uint32_t)p[2] << 8) |
            (uint32_t)p[3];
+}
+
+static bool be64_to_u32(const uint8_t *data, uint32_t *value)
+{
+    if (be32(data) != 0) {
+        return false;
+    }
+
+    *value = be32(data + 4);
+    return true;
 }
 
 static bool string_equal(const char *a, const char *b)
@@ -81,12 +95,21 @@ static bool read_cells_u32(const uint8_t *data, uint32_t cells, uint32_t *value)
         return true;
     }
 
-    if (be32(data) != 0) {
-        return false;
+    return be64_to_u32(data, value);
+}
+
+static bool read_property_u32(const uint8_t *data, uint32_t len, uint32_t *value)
+{
+    if (len == 4) {
+        *value = be32(data);
+        return true;
     }
 
-    *value = be32(data + 4);
-    return true;
+    if (len >= 8) {
+        return be64_to_u32(data, value);
+    }
+
+    return false;
 }
 
 static enum noos_pixel_format parse_format(const char *format)
@@ -125,6 +148,37 @@ static void add_memory_bank(struct noos_boot_info *info, uint32_t start, uint32_
     }
 }
 
+static void parse_memreserve(struct noos_boot_info *info,
+                             const uint8_t *base, uint32_t total,
+                             uint32_t offset)
+{
+    if (offset >= total) {
+        return;
+    }
+
+    const uint8_t *cursor = base + offset;
+    const uint8_t *end = base + total;
+
+    for (uint32_t count = 0; count < NOOS_MAX_RESERVED_RANGES &&
+                             cursor + 16 <= end; ++count, cursor += 16) {
+        uint32_t start;
+        uint32_t size;
+
+        const bool start_ok = be64_to_u32(cursor, &start);
+        const bool size_ok = be64_to_u32(cursor + 8, &size);
+
+        if (be32(cursor) == 0 && be32(cursor + 4) == 0 &&
+            be32(cursor + 8) == 0 && be32(cursor + 12) == 0) {
+            break;
+        }
+
+        if (start_ok && size_ok && size != 0) {
+            boot_add_reserved_range(info, start, size,
+                                    NOOS_RESERVED_DTB_MEMRESERVE);
+        }
+    }
+}
+
 bool fdt_probe(uint32_t address)
 {
     if ((address & 7u) != 0 || address < 0x80000000u || address >= 0xA0000000u) {
@@ -145,15 +199,20 @@ bool fdt_parse_boot_info(struct noos_boot_info *info, uint32_t address)
     const uint32_t total = be32(&header->totalsize);
     const uint32_t struct_off = be32(&header->off_dt_struct);
     const uint32_t strings_off = be32(&header->off_dt_strings);
+    const uint32_t reserve_off = be32(&header->off_mem_rsvmap);
     const uint32_t struct_size = be32(&header->size_dt_struct);
     const uint32_t strings_size = be32(&header->size_dt_strings);
 
     if (total < sizeof(*header) ||
-        struct_off >= total || strings_off >= total ||
+        struct_off >= total || strings_off >= total || reserve_off >= total ||
         struct_size > total - struct_off ||
         strings_size > total - strings_off) {
         return false;
     }
+
+    info->boot_data_size = total;
+    boot_add_reserved_range(info, address, total, NOOS_RESERVED_BOOT_DATA);
+    parse_memreserve(info, base, total, reserve_off);
 
     const uint8_t *struct_begin = base + struct_off;
     const uint8_t *struct_end = struct_begin + struct_size;
@@ -163,9 +222,9 @@ bool fdt_parse_boot_info(struct noos_boot_info *info, uint32_t address)
     memset(states, 0, sizeof(states));
 
     uint32_t depth = 0;
-    uint32_t address_cells = 1;
-    uint32_t size_cells = 1;
     const uint8_t *cursor = struct_begin;
+    uint32_t initrd_start = 0;
+    uint32_t initrd_end = 0;
 
     while (cursor + 4 <= struct_end) {
         const uint32_t token = be32(cursor);
@@ -179,6 +238,15 @@ bool fdt_parse_boot_info(struct noos_boot_info *info, uint32_t address)
             struct node_state *node = &states[depth];
             memset(node, 0, sizeof(*node));
 
+            if (depth == 0) {
+                node->child_address_cells = 1;
+                node->child_size_cells = 1;
+            } else {
+                node->child_address_cells = states[depth - 1].child_address_cells;
+                node->child_size_cells = states[depth - 1].child_size_cells;
+                node->reserved_child = states[depth - 1].reserved_container;
+            }
+
             const char *name = (const char *)cursor;
             const uint8_t *name_scan = cursor;
             while (name_scan < struct_end && *name_scan != '\0') {
@@ -191,6 +259,7 @@ bool fdt_parse_boot_info(struct noos_boot_info *info, uint32_t address)
             node->chosen = string_equal(name, "chosen");
             node->memory_name = string_equal(name, "memory") ||
                                 string_starts_with(name, "memory@");
+            node->reserved_container = string_equal(name, "reserved-memory");
 
             cursor = (const uint8_t *)align4((uintptr_t)(name_scan + 1));
             if (cursor > struct_end) {
@@ -211,6 +280,11 @@ bool fdt_parse_boot_info(struct noos_boot_info *info, uint32_t address)
             if ((node->memory_name || node->memory_type) &&
                 node->reg_size != 0) {
                 add_memory_bank(info, node->reg_address, node->reg_size);
+            }
+
+            if (node->reserved_child && node->reg_size != 0) {
+                boot_add_reserved_range(info, node->reg_address, node->reg_size,
+                                        NOOS_RESERVED_DTB_NODE);
             }
 
             if (node->simplefb &&
@@ -249,17 +323,24 @@ bool fdt_parse_boot_info(struct noos_boot_info *info, uint32_t address)
             const uint8_t *value = cursor;
             struct node_state *node = &states[depth - 1];
 
-            if (depth == 1 && string_equal(prop_name, "#address-cells") && len >= 4) {
-                address_cells = be32(value);
-            } else if (depth == 1 && string_equal(prop_name, "#size-cells") && len >= 4) {
-                size_cells = be32(value);
+            if (string_equal(prop_name, "#address-cells") && len >= 4) {
+                node->child_address_cells = be32(value);
+            } else if (string_equal(prop_name, "#size-cells") && len >= 4) {
+                node->child_size_cells = be32(value);
             } else if (node->chosen && string_equal(prop_name, "bootargs") && len != 0) {
                 info->command_line = (const char *)value;
+            } else if (node->chosen &&
+                       string_equal(prop_name, "linux,initrd-start")) {
+                read_property_u32(value, len, &initrd_start);
+            } else if (node->chosen &&
+                       string_equal(prop_name, "linux,initrd-end")) {
+                read_property_u32(value, len, &initrd_end);
             } else if (string_equal(prop_name, "device_type") && len >= 7) {
                 node->memory_type = string_equal((const char *)value, "memory");
             } else if (string_equal(prop_name, "compatible") && len != 0) {
                 const char *compat = (const char *)value;
                 const uint8_t *limit = value + len;
+
                 while ((const uint8_t *)compat < limit && *compat != '\0') {
                     if (string_equal(compat, "simple-framebuffer")) {
                         node->simplefb = true;
@@ -276,12 +357,21 @@ bool fdt_parse_boot_info(struct noos_boot_info *info, uint32_t address)
                     compat = p + 1;
                 }
             } else if (string_equal(prop_name, "reg")) {
-                const uint32_t cells = address_cells + size_cells;
-                if (cells != 0 && len >= cells * 4u) {
+                uint32_t addr_cells = 1;
+                uint32_t size_cells = 1;
+
+                if (depth >= 2) {
+                    addr_cells = states[depth - 2].child_address_cells;
+                    size_cells = states[depth - 2].child_size_cells;
+                }
+
+                const uint32_t cells = addr_cells + size_cells;
+                if (cells != 0 && cells <= 4 && len >= cells * 4u) {
                     uint32_t reg_address;
                     uint32_t reg_size;
-                    if (read_cells_u32(value, address_cells, &reg_address) &&
-                        read_cells_u32(value + address_cells * 4u, size_cells, &reg_size)) {
+
+                    if (read_cells_u32(value, addr_cells, &reg_address) &&
+                        read_cells_u32(value + addr_cells * 4u, size_cells, &reg_size)) {
                         node->reg_address = reg_address;
                         node->reg_size = reg_size;
                     }
@@ -308,7 +398,18 @@ bool fdt_parse_boot_info(struct noos_boot_info *info, uint32_t address)
         }
 
         if (token == FDT_END) {
-            return depth == 0;
+            if (depth != 0) {
+                return false;
+            }
+
+            if (initrd_end > initrd_start) {
+                info->initrd_start = initrd_start;
+                info->initrd_size = initrd_end - initrd_start;
+                boot_add_reserved_range(info, info->initrd_start, info->initrd_size,
+                                        NOOS_RESERVED_INITRD);
+            }
+
+            return true;
         }
 
         return false;

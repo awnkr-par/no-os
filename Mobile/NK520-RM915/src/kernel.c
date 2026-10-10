@@ -219,7 +219,7 @@ void kernel_main(uint32_t boot_r0, uint32_t machine_type, uint32_t boot_data)
 
     const bool have_framebuffer = framebuffer_init(&info.framebuffer);
     if (have_framebuffer) {
-        framebuffer_show_boot_splash(true);
+        framebuffer_show_booting();
     }
 
     log_boot_info(&info);

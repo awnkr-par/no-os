@@ -104,7 +104,8 @@ void diagnostic_capture_boot_options(const struct noos_boot_options *options)
         (options->splash ? 1u : 0u) |
         (options->selftest ? 2u : 0u) |
         (options->mmu_plan ? 4u : 0u) |
-        (options->scheduler_test ? 8u : 0u);
+        (options->scheduler_test ? 8u : 0u) |
+        (options->timer_irq ? 16u : 0u);
     g_diag.boot_log_level = options->log_level;
     refresh_checksum();
 }
@@ -194,6 +195,33 @@ void diagnostic_capture_irq(const struct irq_stats *irq)
     g_diag.irq_handled = irq->handled;
     g_diag.irq_spurious = irq->spurious;
     g_diag.irq_last = irq->last_irq;
+    refresh_checksum();
+}
+
+void diagnostic_capture_qgic(const struct qgic_stats *qgic)
+{
+    if (qgic == 0) {
+        return;
+    }
+
+    g_diag.qgic_initialized = qgic->initialized;
+    g_diag.qgic_irq_count = qgic->irq_count;
+    g_diag.qgic_last_ack = qgic->last_ack;
+    g_diag.qgic_spurious = qgic->spurious;
+    g_diag.qgic_unhandled = qgic->unhandled;
+    refresh_checksum();
+}
+
+void diagnostic_capture_timer(const struct rm915_timer_stats *timer)
+{
+    if (timer == 0) {
+        return;
+    }
+
+    g_diag.timer_initialized = timer->initialized;
+    g_diag.timer_interrupts = timer->interrupts;
+    g_diag.timer_last_count = timer->last_count;
+    g_diag.timer_period_counts = timer->period_counts;
     refresh_checksum();
 }
 

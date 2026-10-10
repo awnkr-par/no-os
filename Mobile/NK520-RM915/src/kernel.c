@@ -4,6 +4,7 @@
 #include <noos/cpu.h>
 #include <noos/diagnostic.h>
 #include <noos/framebuffer.h>
+#include <noos/exception.h>
 #include <noos/heap.h>
 #include <noos/irq.h>
 #include <noos/klog.h>
@@ -11,9 +12,11 @@
 #include <noos/panic.h>
 #include <noos/platform.h>
 #include <noos/pmm.h>
+#include <noos/qgic.h>
 #include <noos/scheduler.h>
 #include <noos/selftest.h>
 #include <noos/status.h>
+#include <noos/timer.h>
 #include <noos/uartdm.h>
 
 static const char *boot_protocol_name(enum noos_boot_protocol protocol)
@@ -234,11 +237,12 @@ void kernel_main(uint32_t boot_r0, uint32_t machine_type, uint32_t boot_data)
     struct noos_boot_options options;
     bootargs_parse(&options, info.command_line);
     diagnostic_capture_boot_options(&options);
-    console_printf("boot options: splash=%s selftest=%s mmu-plan=%s sched-test=%s loglevel=%u\n",
+    console_printf("boot options: splash=%s selftest=%s mmu-plan=%s sched-test=%s timer-irq=%s loglevel=%u\n",
                    options.splash ? "on" : "off",
                    options.selftest ? "on" : "off",
                    options.mmu_plan ? "on" : "off",
                    options.scheduler_test ? "on" : "off",
+                   options.timer_irq ? "on" : "off",
                    options.log_level);
 
     const bool have_framebuffer = framebuffer_init(&info.framebuffer);
@@ -294,11 +298,33 @@ void kernel_main(uint32_t boot_r0, uint32_t machine_type, uint32_t boot_data)
         framebuffer_show_runtime(&info, pmm_get_stats(), tests);
     }
 
+    if (options.timer_irq) {
+        arm_irq_disable();
+
+        if (!qgic_init()) {
+            panic("QGIC initialization failed");
+        }
+
+        if (!rm915_timer_irq_init()) {
+            panic("DGT timer IRQ initialization failed");
+        }
+
+        console_printf("timer IRQ: DGT PPI %u at %u Hz, period=%u counts\n",
+                       NOOS_RM915_DGT_IRQ, NOOS_RM915_TICK_HZ,
+                       NOOS_RM915_TICK_COUNTS);
+        arm_irq_enable();
+        console_write("CPU IRQ delivery enabled\n");
+    } else {
+        console_write("timer IRQ: disabled by boot option\n");
+    }
+
     log_allocator_state();
     diagnostic_capture_pmm(pmm_get_stats());
     diagnostic_capture_uart(uartdm_get_stats());
     diagnostic_capture_scheduler(scheduler_get_stats());
     diagnostic_capture_irq(irq_get_stats());
+    diagnostic_capture_qgic(qgic_get_stats());
+    diagnostic_capture_timer(rm915_timer_get_stats());
     const struct klog_stats *log_stats = klog_get_stats();
     console_printf("klog: bytes=%u wraps=%u overwritten=%u retained=%u\n",
                    log_stats->bytes_written, log_stats->wraps,

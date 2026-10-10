@@ -46,7 +46,7 @@ lk2nd.pass-simplefb=xrgb8888,autorefresh
 
 ## Proof-of-life splash
 
-If a usable simple framebuffer is present, noOS draws a high-contrast splash showing:
+If a usable framebuffer is present, noOS first draws a high-contrast splash showing:
 
 ```text
 NOOS
@@ -56,4 +56,4 @@ SELFTEST PASS
 
 A panic after framebuffer initialization redraws the status as `SELFTEST FAIL`.
 
-This is intentionally primitive. It exists to prove that the kernel reached C, parsed boot data, initialized memory, and completed self-tests without needing UART first.
+After successful self-tests the splash is replaced by a runtime dashboard showing boot protocol, RAM size, free/permanent page counts, framebuffer address, and test counts. This turns the bootloader framebuffer into a minimal hardware debug console before UART exists.

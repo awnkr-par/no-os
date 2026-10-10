@@ -5,6 +5,7 @@ static struct noos_task g_tasks[NOOS_MAX_TASKS];
 static struct scheduler_stats g_stats;
 static uint32_t g_next_id;
 static uint32_t g_cursor;
+static bool g_need_resched;
 
 static void recount(void)
 {
@@ -32,6 +33,7 @@ void scheduler_init(void)
     memset(&g_stats, 0, sizeof(g_stats));
     g_next_id = 1;
     g_cursor = 0;
+    g_need_resched = false;
 }
 
 int32_t scheduler_add(noos_task_entry entry, void *context)
@@ -105,6 +107,9 @@ void scheduler_tick(void)
     }
 
     recount();
+    if (g_stats.ready_count != 0u) {
+        scheduler_request_reschedule();
+    }
 }
 
 int32_t scheduler_pick_next(void)
@@ -119,6 +124,30 @@ int32_t scheduler_pick_next(void)
     }
 
     return -1;
+}
+
+void scheduler_request_reschedule(void)
+{
+    if (!g_need_resched) {
+        g_stats.reschedule_requests++;
+    }
+    g_need_resched = true;
+}
+
+bool scheduler_reschedule_pending(void)
+{
+    return g_need_resched;
+}
+
+void scheduler_clear_reschedule(void)
+{
+    g_need_resched = false;
+}
+
+void scheduler_note_context_switch(void)
+{
+    g_stats.context_switches++;
+    g_need_resched = false;
 }
 
 const struct noos_task *scheduler_task(uint32_t id)

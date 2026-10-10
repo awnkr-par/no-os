@@ -1,17 +1,18 @@
+#include <noos/bootargs.h>
 #include <noos/console.h>
 #include <noos/heap.h>
+#include <noos/klog.h>
 #include <noos/memory.h>
 #include <noos/mmu.h>
 #include <noos/pmm.h>
+#include <noos/scheduler.h>
 #include <noos/selftest.h>
 #include <noos/uartdm.h>
 #include <noos/timer.h>
 
 static void record(struct selftest_result *result, bool ok, const char *name)
 {
-    console_write("[selftest] ");
-    console_write(name);
-    console_write(ok ? ": ok\n" : ": FAIL\n");
+    console_printf("[selftest] %s: %s\n", name, ok ? "ok" : "FAIL");
 
     if (ok) {
         result->passed++;
@@ -47,6 +48,42 @@ static bool reserved_ranges_protected(const struct noos_boot_info *boot)
     }
 
     return true;
+}
+
+static void dummy_task(void *context)
+{
+    (void)context;
+}
+
+static bool scheduler_core_test(void)
+{
+    scheduler_init();
+
+    const int32_t a = scheduler_add(dummy_task, 0);
+    const int32_t b = scheduler_add(dummy_task, 0);
+    if (a <= 0 || b <= 0 || a == b) {
+        return false;
+    }
+
+    const int32_t first = scheduler_pick_next();
+    const int32_t second = scheduler_pick_next();
+    if (first <= 0 || second <= 0 || first == second) {
+        return false;
+    }
+
+    if (!scheduler_sleep_until((uint32_t)first, 2u)) {
+        return false;
+    }
+
+    scheduler_tick();
+    const struct noos_task *sleeping = scheduler_task((uint32_t)first);
+    if (sleeping == 0 || sleeping->state != NOOS_TASK_SLEEPING) {
+        return false;
+    }
+
+    scheduler_tick();
+    sleeping = scheduler_task((uint32_t)first);
+    return sleeping != 0 && sleeping->state == NOOS_TASK_READY;
 }
 
 struct selftest_result selftest_run(const struct noos_boot_info *boot)
@@ -99,6 +136,22 @@ struct selftest_result selftest_run(const struct noos_boot_info *boot)
     void *unaligned_size = kmalloc(13);
     record(&result, unaligned_size != 0 &&
            (((uintptr_t)unaligned_size & 7u) == 0), "heap alignment");
+
+    struct noos_boot_options options;
+    bootargs_parse(&options,
+                   "noos.splash=0 noos.selftest=yes noos.mmu-plan=off "
+                   "noos.sched-test=1 noos.loglevel=0x4");
+    record(&result,
+           !options.splash && options.selftest && !options.mmu_plan &&
+           options.scheduler_test && options.log_level == 4u,
+           "boot option parsing");
+
+    record(&result, scheduler_core_test(), "scheduler core state machine");
+
+    char log_tail[64];
+    const size_t snap = klog_snapshot(log_tail, sizeof(log_tail));
+    record(&result, snap != 0 && klog_get_stats()->bytes_written != 0,
+           "circular kernel log");
 
     record(&result, uartdm_validate_full_init_plan(),
            "RM915 UART full-init constant plan");

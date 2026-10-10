@@ -2,7 +2,7 @@
 .arch armv7-a
 .arm
 
-.section .text, "ax", %progbits
+.section .text.context_switch, "ax", %progbits
 .align 2
 
 .global arm_context_switch

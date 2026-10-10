@@ -17,7 +17,36 @@ static void record(struct selftest_result *result, bool ok, const char *name)
     }
 }
 
-struct selftest_result selftest_run(void)
+static bool reserved_ranges_protected(const struct noos_boot_info *boot)
+{
+    const struct pmm_stats *stats = pmm_get_stats();
+
+    for (uint32_t i = 0; i < boot->reserved_range_count; ++i) {
+        const struct noos_reserved_range *range = &boot->reserved_ranges[i];
+
+        if (range->size == 0) {
+            continue;
+        }
+
+        const uint32_t end = range->start + range->size;
+        if (end <= stats->region_start || range->start >= stats->region_end) {
+            continue;
+        }
+
+        uint32_t probe = range->start;
+        if (probe < stats->region_start) {
+            probe = stats->region_start;
+        }
+
+        if (!pmm_page_is_permanent(probe)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+struct selftest_result selftest_run(const struct noos_boot_info *boot)
 {
     struct selftest_result result = {0, 0};
 
@@ -47,6 +76,10 @@ struct selftest_result selftest_run(void)
     const struct pmm_stats freed = *pmm_get_stats();
     free_ok = free_ok && freed.free_pages == before.free_pages;
     record(&result, free_ok, "PMM free/reuse accounting");
+
+    record(&result, page_ok && !pmm_free_page(page), "PMM double-free rejection");
+    record(&result, boot != 0 && reserved_ranges_protected(boot),
+           "boot reserved ranges protected");
 
     uint32_t *words = (uint32_t *)kcalloc(16, sizeof(uint32_t));
     bool zeroed = words != 0;

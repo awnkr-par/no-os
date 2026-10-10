@@ -1,5 +1,6 @@
 #include <noos/console.h>
 #include <noos/diagnostic.h>
+#include <noos/klog.h>
 #include <noos/memory.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -93,6 +94,21 @@ void diagnostic_capture_boot(const struct noos_boot_info *boot)
     refresh_checksum();
 }
 
+void diagnostic_capture_boot_options(const struct noos_boot_options *options)
+{
+    if (options == 0) {
+        return;
+    }
+
+    g_diag.boot_option_flags =
+        (options->splash ? 1u : 0u) |
+        (options->selftest ? 2u : 0u) |
+        (options->mmu_plan ? 4u : 0u) |
+        (options->scheduler_test ? 8u : 0u);
+    g_diag.boot_log_level = options->log_level;
+    refresh_checksum();
+}
+
 void diagnostic_capture_cpu(const struct cpu_state *cpu)
 {
     if (cpu == 0) {
@@ -153,6 +169,20 @@ void diagnostic_capture_selftest(struct selftest_result result)
     refresh_checksum();
 }
 
+void diagnostic_capture_scheduler(const struct scheduler_stats *scheduler)
+{
+    if (scheduler == 0) {
+        return;
+    }
+
+    g_diag.scheduler_ticks = scheduler->ticks;
+    g_diag.scheduler_tasks = scheduler->task_count;
+    g_diag.scheduler_ready = scheduler->ready_count;
+    g_diag.scheduler_sleeping = scheduler->sleeping_count;
+    g_diag.scheduler_switches_planned = scheduler->switches_planned;
+    refresh_checksum();
+}
+
 void diagnostic_capture_panic(const char *reason)
 {
     copy_string((char *)g_diag.panic_reason, sizeof(g_diag.panic_reason), reason);
@@ -161,15 +191,15 @@ void diagnostic_capture_panic(const char *reason)
 
 void diagnostic_capture_console(void)
 {
-    const char *log = console_buffer();
-    const size_t length = console_buffer_length();
-    size_t start = 0;
+    char snapshot[NOOS_DIAG_LOG_BYTES];
+    klog_snapshot(snapshot, sizeof(snapshot));
+    copy_string((char *)g_diag.log_tail, sizeof(g_diag.log_tail), snapshot);
 
-    if (length >= sizeof(g_diag.log_tail)) {
-        start = length - (sizeof(g_diag.log_tail) - 1u);
-    }
-
-    copy_string((char *)g_diag.log_tail, sizeof(g_diag.log_tail), log + start);
+    const struct klog_stats *stats = klog_get_stats();
+    g_diag.klog_bytes_written = stats->bytes_written;
+    g_diag.klog_bytes_overwritten = stats->bytes_dropped;
+    g_diag.klog_wraps = stats->wraps;
+    g_diag.klog_length = stats->length;
     refresh_checksum();
 }
 

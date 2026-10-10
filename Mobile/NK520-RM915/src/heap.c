@@ -50,11 +50,16 @@ void *kmalloc(size_t size)
 
 void *kcalloc(size_t count, size_t size)
 {
-    if (count == 0 || size == 0 || count > (SIZE_MAX / size)) {
+    if (count == 0 || size == 0) {
         return 0;
     }
 
-    const size_t total = count * size;
+    const uint64_t total64 = (uint64_t)count * (uint64_t)size;
+    if (total64 > (uint64_t)SIZE_MAX) {
+        return 0;
+    }
+
+    const size_t total = (size_t)total64;
     void *ptr = kmalloc(total);
     if (ptr != 0) {
         memset(ptr, 0, total);

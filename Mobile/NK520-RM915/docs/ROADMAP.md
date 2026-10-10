@@ -41,6 +41,10 @@
 - reserved-range permanence test
 - checksummed `.noos_diag` block + decoder
 - CI architecture, entrypoint, symbol, artifact, and boot-image checks
+- boot-option parser
+- freestanding formatted console output
+- 8 KiB circular kernel log + diagnostic counters
+- scheduler task/state/tick/round-robin core + self-tests
 
 ## Milestone 3 — first observable hardware output ✅/TEST NEEDED
 

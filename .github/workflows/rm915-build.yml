@@ -76,6 +76,12 @@ jobs:
           arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]scheduler_pick_next$"
           arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]irq_register$"
           arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]irq_dispatch$"
+          arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]exception_irq_handle$"
+          arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]arm_irq_enable$"
+          arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]qgic_init$"
+          arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]qgic_handle_one$"
+          arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]rm915_timer_irq_init$"
+          arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]rm915_timer_irq_handler$"
           arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]fdt_parse_boot_info$"
           arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]framebuffer_show_boot_splash$"
           arm-none-eabi-nm build/noos.elf | grep -Eq "[[:space:]]boot_status_set$"
@@ -131,6 +137,14 @@ jobs:
           arm-none-eabi-nm build-uart/noos.elf | grep -Eq "[[:space:]]uartdm_putc$"
           test -s build-uart/noos-manifest.json
 
+      - name: Compile timer-IRQ boot variant
+        run: |
+          make -f GNUmakefile BUILD=build-timer             NOOS_CMDLINE='noos.splash=1 noos.selftest=1 noos.mmu-plan=1 noos.sched-test=1 noos.timer-irq=1 noos.loglevel=3'
+          python3 tools/verify_bootimg.py build-timer/noos-boot.img             --expect-cmdline 'lk2nd.pass-simplefb=xrgb8888 noos.splash=1 noos.selftest=1 noos.mmu-plan=1 noos.sched-test=1 noos.timer-irq=1 noos.loglevel=3'
+          arm-none-eabi-nm build-timer/noos.elf | grep -Eq "[[:space:]]qgic_handle_one$"
+          arm-none-eabi-nm build-timer/noos.elf | grep -Eq "[[:space:]]rm915_timer_irq_init$"
+          test -s build-timer/noos-manifest.json
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -146,3 +160,6 @@ jobs:
             Mobile/NK520-RM915/build-uart/noos-boot.img
             Mobile/NK520-RM915/build-uart/noos.elf
             Mobile/NK520-RM915/build-uart/noos-manifest.json
+            Mobile/NK520-RM915/build-timer/noos-boot.img
+            Mobile/NK520-RM915/build-timer/noos.elf
+            Mobile/NK520-RM915/build-timer/noos-manifest.json

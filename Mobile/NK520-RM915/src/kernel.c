@@ -5,6 +5,7 @@
 #include <noos/diagnostic.h>
 #include <noos/framebuffer.h>
 #include <noos/heap.h>
+#include <noos/irq.h>
 #include <noos/klog.h>
 #include <noos/mmu.h>
 #include <noos/panic.h>
@@ -272,6 +273,7 @@ void kernel_main(uint32_t boot_r0, uint32_t machine_type, uint32_t boot_data)
         console_write("MMU plan: disabled by boot option\n");
     }
 
+    irq_init();
     scheduler_init();
 
     struct selftest_result tests = {0, 0};
@@ -296,6 +298,7 @@ void kernel_main(uint32_t boot_r0, uint32_t machine_type, uint32_t boot_data)
     diagnostic_capture_pmm(pmm_get_stats());
     diagnostic_capture_uart(uartdm_get_stats());
     diagnostic_capture_scheduler(scheduler_get_stats());
+    diagnostic_capture_irq(irq_get_stats());
     const struct klog_stats *log_stats = klog_get_stats();
     console_printf("klog: bytes=%u wraps=%u overwritten=%u retained=%u\n",
                    log_stats->bytes_written, log_stats->wraps,

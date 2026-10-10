@@ -3,6 +3,7 @@
 #include <noos/memory.h>
 #include <noos/pmm.h>
 #include <noos/selftest.h>
+#include <noos/uartdm.h>
 
 static void record(struct selftest_result *result, bool ok, const char *name)
 {
@@ -96,6 +97,9 @@ struct selftest_result selftest_run(const struct noos_boot_info *boot)
     void *unaligned_size = kmalloc(13);
     record(&result, unaligned_size != 0 &&
            (((uintptr_t)unaligned_size & 7u) == 0), "heap alignment");
+
+    record(&result, uartdm_validate_full_init_plan(),
+           "RM915 UART full-init constant plan");
 
     return result;
 }

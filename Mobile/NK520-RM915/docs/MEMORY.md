@@ -2,7 +2,7 @@
 
 ## Boot memory map
 
-noOS reads all legacy `ATAG_MEM` records supplied by the bootloader, up to `NOOS_MAX_MEMORY_BANKS`.
+noOS accepts legacy ATAGS or DTB memory descriptions, preserving up to `NOOS_MAX_MEMORY_BANKS` RAM banks.
 
 The kernel does **not** assume the Lumia's RAM is represented as one perfectly contiguous bank. Each valid ATAG memory record is preserved and fed to the physical memory manager.
 
@@ -19,11 +19,14 @@ At initialization all pages are treated as unavailable. Pages covered by valid A
 
 The PMM permanently reserves:
 
-- the complete linked noOS image;
-- `.bss`;
-- all mode-specific stacks;
-- both PMM bitmaps themselves, because they live inside `.bss`;
-- the page containing the bootloader ATAGS.
+- the complete linked noOS image, including `.bss`, MMU tables, diagnostics, and mode stacks;
+- the complete ATAGS or DTB blob;
+- DTB memreserve entries;
+- `/reserved-memory` child ranges;
+- initrd ranges from ATAGS or DTB;
+- bootloader-provided framebuffer memory.
+
+The reservation list is parsed before PMM initialization and then applied generically. `pmm_free_page()` rejects permanent pages.
 
 Pages allocated with `pmm_alloc_page()` may later be released with `pmm_free_page()`. Permanently reserved pages are rejected by `pmm_free_page()`.
 
@@ -47,5 +50,7 @@ This allocator is for bring-up structures, not userspace or long-lived productio
 - explicit reservation API for future MMIO/DMA/device carve-outs;
 - multiple-page heap allocations;
 - slab or free-list kernel allocator;
-- ARMv7 short-descriptor page tables;
-- MMU/cache enablement only after the physical map is validated on hardware.
+- multi-page heap allocations;
+- slab or free-list kernel allocator;
+- device-memory entries in the existing ARMv7 L1 table;
+- MMU/cache enablement only after required MMIO mappings are validated on hardware.

@@ -21,7 +21,9 @@ LINKFLAGS :=
 endif
 
 PYTHON ?= python3
-BOOT_CMDLINE ?= lk2nd.pass-simplefb=xrgb8888
+LK2ND_CMDLINE ?= lk2nd.pass-simplefb=xrgb8888
+NOOS_CMDLINE ?= noos.splash=1 noos.selftest=1 noos.mmu-plan=1 noos.sched-test=1 noos.loglevel=2
+BOOT_CMDLINE := $(LK2ND_CMDLINE) $(NOOS_CMDLINE)
 UARTDM_HANDOFF ?= 0
 CPPFLAGS := -Iinclude -DNOOS_UARTDM_HANDOFF=$(UARTDM_HANDOFF)
 CFLAGS := $(ARCHFLAGS) -std=c11 -ffreestanding -fno-builtin -fno-stack-protector -fno-pic -fdata-sections -ffunction-sections -Wall -Wextra -Werror -Os

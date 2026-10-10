@@ -24,6 +24,7 @@ void *pmm_alloc_page(void);
 bool pmm_free_page(void *page);
 bool pmm_reserve_range(uint32_t start, uint32_t size);
 bool pmm_page_is_free(uint32_t address);
+bool pmm_page_is_permanent(uint32_t address);
 const struct pmm_stats *pmm_get_stats(void);
 
 #endif

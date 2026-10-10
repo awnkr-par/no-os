@@ -255,6 +255,7 @@ void kernel_main(uint32_t boot_r0, uint32_t machine_type, uint32_t boot_data)
     if (!mmu_prepare_identity(&info)) {
         panic("MMU identity-map planning failed");
     }
+    diagnostic_capture_mmu(mmu_get_stats());
     boot_status_set(NOOS_STAGE_MMU_PLAN, mmu_get_stats()->mapped_sections);
     log_mmu_state();
 

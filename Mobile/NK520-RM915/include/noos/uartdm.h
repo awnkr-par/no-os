@@ -20,9 +20,28 @@ struct uartdm_stats {
     bool healthy;
 };
 
+struct uartdm_full_init_plan {
+    uint32_t tlmm_tx_cfg;
+    uint32_t tlmm_rx_cfg;
+    uint32_t tlmm_cfg_value;
+    uint32_t gsbi_ctrl;
+    uint32_t gsbi_protocol_value;
+    uint32_t clk_hclk_ctl;
+    uint32_t clk_uart_md;
+    uint32_t clk_uart_ns;
+    uint32_t clk_reset;
+    uint32_t uart_md_value;
+    uint32_t uart_ns_value;
+    uint32_t uart_target_hz;
+    uint32_t uart_baud;
+};
+
 bool uartdm_adopt_bootloader(void);
 bool uartdm_putc(char c);
 void uartdm_write(const char *data, size_t length);
 const struct uartdm_stats *uartdm_get_stats(void);
+
+const struct uartdm_full_init_plan *uartdm_full_init_plan(void);
+bool uartdm_validate_full_init_plan(void);
 
 #endif

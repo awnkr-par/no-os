@@ -20,6 +20,8 @@ Relevant files:
 | `platform/msm8960/include/platform/clock.h` | GSBI clock-register formulas, M/N encoding, PLL8 mux id |
 | `platform/msm8960/clock.c` | GSBI5 UART clock object and 1.8432 MHz table entry `(pll8, d=1, m=3, n=625)` |
 | `platform/msm8960/acpuclock.c` | UART clock requested at 1,843,200 Hz |
+| `platform/msm8960/platform.c` | DGT divider value 3 and 6.75 MHz tick rate |
+| `platform/msm8960/include/platform/iomap.h` | GIC + GPT/DGT timer addresses |
 | `platform/msm_shared/include/gsbi.h` | GSBI protocol shift and I2C/UART protocol code |
 | `platform/msm_shared/include/uart_dm.h` | legacy UARTDM register layout and status bits |
 | `platform/msm_shared/uart_dm.c` | UARTDM initialization and TX sequencing |

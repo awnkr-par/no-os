@@ -17,25 +17,39 @@
 - retain RAM-bank and command-line data
 - package a legacy Android `boot.img`
 
-## Milestone 2 — first observable output
+## Milestone 1.5 — kernel diagnostics and memory ✅
+
+- 4 KiB early in-memory console buffer
+- hexadecimal and decimal boot diagnostics
+- persistent panic reason
+- first-bank 4 KiB physical page allocator
+- allocator begins after the linked kernel image/stack
+- automated RM-915 CI build on pushes to `main`
+
+The early console intentionally buffers output in RAM until a verified UART or framebuffer backend exists.
+
+## Milestone 2 — first observable hardware output
 
 - verify RM-915 ttyHSL0 controller resource
 - verify GSBI mode, clock and pinmux
 - implement minimal UARTDM TX
-- print an early noOS banner and boot-register dump
+- replay the early console over UART
+- print boot registers, ATAGS state, RAM region and PMM statistics
 
-## Milestone 3 — memory
+## Milestone 3 — memory protection
 
-- validate RAM map from ATAGS against known 512 MiB hardware
-- reserve image/stack/boot-data regions
-- page-frame allocator
-- MMU page tables and guarded enablement
+- validate the full RAM map and reserved regions
+- support multiple memory banks if Fame exposes them
+- reserve bootloader/ATAGS/device regions explicitly
+- MMU page tables
+- guarded MMU + cache enablement
 
 ## Milestone 4 — timer and interrupts
 
 - KPSS timer
 - interrupt controller
-- exception diagnostics
+- dedicated exception-mode stacks
+- exception diagnostics and fault register dumps
 
 ## Milestone 5 — user-visible hardware
 

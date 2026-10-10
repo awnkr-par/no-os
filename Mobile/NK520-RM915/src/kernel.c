@@ -170,6 +170,10 @@ static void log_mmu_state(void)
     console_write_hex32(mmu->table_address);
     console_write("\nmapped 1MiB sections: ");
     console_write_dec32(mmu->mapped_sections);
+    console_write(" RAM=");
+    console_write_dec32(mmu->ram_sections);
+    console_write(" DEV=");
+    console_write_dec32(mmu->device_sections);
     console_write(" range=");
     console_write_hex32(mmu->first_mapped_section << 20);
     console_write("-");

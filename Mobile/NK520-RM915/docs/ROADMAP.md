@@ -3,7 +3,7 @@
 ## Milestone 0 — freestanding kernel foundation ✅
 
 - ARMv7 entry point
-- exception vector table
+- VBAR exception vector table
 - stack and `.bss` setup
 - C kernel entry
 - memory primitives
@@ -11,56 +11,68 @@
 
 ## Milestone 1 — bootloader handoff ✅
 
-- link at Fame kernel load address `0x80208000`
+- Fame kernel load address `0x80208000`
 - preserve `r0`/`r1`/`r2`
-- parse legacy ATAGS
-- retain RAM-bank and command-line data
-- package a legacy Android `boot.img`
+- bounded legacy ATAG parser
+- multiple `ATAG_MEM` banks
+- command-line capture
+- legacy Android `boot.img` generation and validation
 
-## Milestone 1.5 — kernel diagnostics and memory ✅
+## Milestone 2 — kernel diagnostics and memory ✅
 
-- 4 KiB early in-memory console buffer
-- hexadecimal and decimal boot diagnostics
+- 4 KiB in-memory early console
+- hex/decimal boot diagnostics
 - persistent panic reason
-- first-bank 4 KiB physical page allocator
-- allocator begins after the linked kernel image/stack
-- automated RM-915 CI build on pushes to `main`
+- dedicated SVC/IRQ/FIQ/abort/undefined stacks
+- register + ARM fault-status exception capture
+- 512 MiB-capable bitmap PMM
+- permanent page reservations
+- allocation/free accounting
+- page-backed kernel heap
+- boot-time memory allocator self-tests
+- CI architecture, entrypoint, symbol, artifact, and boot-image checks
 
-The early console intentionally buffers output in RAM until a verified UART or framebuffer backend exists.
+## Milestone 3 — first observable hardware output
 
-## Milestone 2 — first observable hardware output
-
-- verify RM-915 ttyHSL0 controller resource
-- verify GSBI mode, clock and pinmux
+- identify exact Fame `ttyHSL0` controller resource
+- verify GSBI protocol selection
+- verify UART clocks/resets
+- verify TLMM pinmux
 - implement minimal UARTDM TX
-- replay the early console over UART
-- print boot registers, ATAGS state, RAM region and PMM statistics
+- replay the complete early console over UART
+- print live boot/fault diagnostics from the phone
 
-## Milestone 3 — memory protection
+## Milestone 4 — virtual memory and CPU state
 
-- validate the full RAM map and reserved regions
-- support multiple memory banks if Fame exposes them
-- reserve bootloader/ATAGS/device regions explicitly
-- MMU page tables
-- guarded MMU + cache enablement
+- validate all device/reserved RAM regions
+- ARMv7 short-descriptor translation tables
+- identity-map early kernel + required MMIO
+- domain/access permissions
+- guarded MMU enablement
+- I-cache/D-cache sequencing
+- page-fault diagnostics against the new tables
 
-## Milestone 4 — timer and interrupts
+## Milestone 5 — timer and interrupts
 
-- KPSS timer
+- identify KPSS timer resource
 - interrupt controller
-- dedicated exception-mode stacks
-- exception diagnostics and fault register dumps
+- real IRQ dispatch instead of fatal IRQ
+- monotonic tick source
+- sleep/delay primitives
 
-## Milestone 5 — user-visible hardware
+## Milestone 6 — user-visible hardware
 
-- framebuffer/display handoff or MDP bring-up
-- physical buttons through PM8038/SSBI
+- framebuffer handoff or MDP display bring-up
+- GPIO/button input
+- PM8038/SSBI support
 - USB debug transport
 
-## Milestone 6 — storage and higher-level OS
+## Milestone 7 — storage and higher-level OS
 
-- eMMC/SD
+- eMMC
+- block layer
 - filesystem
 - scheduler/threads
-- syscall boundary
+- syscall ABI
+- userspace loader
 - userspace

@@ -59,14 +59,26 @@ Needs real Lumia validation:
 - determine whether Fame requires `autorefresh`
 - confirm stride/pixel format and panel persistence on hardware
 
-## Milestone 4 — physical debug transport
+## Milestone 4 — physical debug transport 🚧
 
-- identify exact Fame `ttyHSL0` controller resource
-- verify GSBI protocol selection
-- verify UART clocks/resets
-- verify TLMM pinmux
-- implement minimal UARTDM TX
-- replay the complete early console over UART
+Implemented / source-verified:
+
+- Fame/Lumia stable LK GSBI5 selection
+- GSBI base `0x16400000`
+- UARTDM base `0x16440000`
+- RX GPIO23 / TX GPIO22 function 1
+- bounded legacy UARTDM TX path
+- opt-in LK/lk2nd UART handoff backend
+- live early-console mirroring over UART
+- UART health/timeout diagnostics
+- full clock/TLMM init plan with compile-time and boot-time validation
+- separate safe/default and UART-enabled CI artifacts
+
+Remaining:
+
+- validate UART handoff on physical RM-915
+- port full cold-init clock branch/root/halt sequencing
+- enable full initialization only behind an explicit experimental flag
 
 ## Milestone 5 — virtual memory and CPU state 🚧
 
@@ -82,6 +94,7 @@ Remaining:
 
 - validate all device/reserved RAM regions
 - identity-map required MMIO
+- verified TLMM, clock-controller, and GSBI5/UARTDM sections are already mapped as shareable Device + XN
 - domain/access permissions
 - guarded MMU enablement after device mappings exist
 - I-cache/D-cache sequencing

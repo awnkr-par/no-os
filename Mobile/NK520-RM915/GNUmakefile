@@ -31,6 +31,7 @@ OBJECTS := \
 	$(BUILD)/src/boot.o \
 	$(BUILD)/src/console.o \
 	$(BUILD)/src/cpu.o \
+	$(BUILD)/src/diagnostic.o \
 	$(BUILD)/src/exception.o \
 	$(BUILD)/src/fdt.o \
 	$(BUILD)/src/framebuffer.o \

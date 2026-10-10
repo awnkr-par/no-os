@@ -31,6 +31,10 @@ struct noos_fault_state {
 
 _Noreturn void exception_handle(uint32_t type, uint32_t spsr,
                                 const struct noos_exception_frame *frame);
+void exception_irq_handle(uint32_t spsr,
+                          const struct noos_exception_frame *frame);
+void arm_irq_enable(void);
+void arm_irq_disable(void);
 const struct noos_fault_state *exception_last_fault(void);
 
 #endif

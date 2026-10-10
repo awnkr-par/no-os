@@ -14,6 +14,45 @@
 
 #define UARTDM_POLL_BUDGET            1000000u
 
+#define RM915_TLMM_BASE               0x00800000u
+#define RM915_CLK_CTL_BASE            0x00900000u
+#define RM915_TLMM_CFG_ADDR(gpio)     (RM915_TLMM_BASE + 0x1000u + (gpio) * 0x10u)
+#define RM915_GSBI_HCLK_CTL(id)       (RM915_CLK_CTL_BASE + 0x29C0u + 0x20u * ((id) - 1u))
+#define RM915_GSBI_UART_MD(id)        (RM915_CLK_CTL_BASE + 0x29D0u + 0x20u * ((id) - 1u))
+#define RM915_GSBI_UART_NS(id)        (RM915_CLK_CTL_BASE + 0x29D4u + 0x20u * ((id) - 1u))
+#define RM915_GSBI_RESET(id)          (RM915_CLK_CTL_BASE + 0x29DCu + 0x20u * ((id) - 1u))
+
+#define RM915_UART_M                  3u
+#define RM915_UART_N                  625u
+#define RM915_UART_D                  1u
+#define RM915_UART_PLL8_MUX           3u
+#define RM915_UART_MD16(m, n)         (((m) << 16) | ((~(n)) & 0xFFFFu))
+#define RM915_UART_NS_VALUE(n, m, d, s) \
+    ((((~((n) - (m))) & 0xFFFFu) << 16) | \
+     (2u << 5) | (((d) - 1u) << 3) | (s))
+
+#define RM915_UART_MD_VALUE \
+    RM915_UART_MD16(RM915_UART_M, RM915_UART_N)
+#define RM915_UART_NS_VALUE_1843200 \
+    RM915_UART_NS_VALUE(RM915_UART_N, RM915_UART_M, RM915_UART_D, RM915_UART_PLL8_MUX)
+
+_Static_assert(RM915_TLMM_CFG_ADDR(22u) == 0x00801160u,
+               "RM915 TX TLMM address mismatch");
+_Static_assert(RM915_TLMM_CFG_ADDR(23u) == 0x00801170u,
+               "RM915 RX TLMM address mismatch");
+_Static_assert(RM915_GSBI_HCLK_CTL(5u) == 0x00902A40u,
+               "RM915 GSBI5 HCLK address mismatch");
+_Static_assert(RM915_GSBI_UART_MD(5u) == 0x00902A50u,
+               "RM915 GSBI5 MD address mismatch");
+_Static_assert(RM915_GSBI_UART_NS(5u) == 0x00902A54u,
+               "RM915 GSBI5 NS address mismatch");
+_Static_assert(RM915_GSBI_RESET(5u) == 0x00902A5Cu,
+               "RM915 GSBI5 reset address mismatch");
+_Static_assert(RM915_UART_MD_VALUE == 0x0003FD8Eu,
+               "RM915 1.8432 MHz UART MD value mismatch");
+_Static_assert(RM915_UART_NS_VALUE_1843200 == 0xFD910043u,
+               "RM915 1.8432 MHz UART NS value mismatch");
+
 static struct uartdm_stats g_uart;
 
 /*
@@ -28,17 +67,17 @@ static struct uartdm_stats g_uart;
  * This is a DATA PLAN ONLY. noOS does not execute these clock/TLMM writes.
  */
 static const struct uartdm_full_init_plan g_full_plan = {
-    .tlmm_tx_cfg = 0x00801160u,
-    .tlmm_rx_cfg = 0x00801170u,
+    .tlmm_tx_cfg = RM915_TLMM_CFG_ADDR(NOOS_RM915_UART_TX_GPIO),
+    .tlmm_rx_cfg = RM915_TLMM_CFG_ADDR(NOOS_RM915_UART_RX_GPIO),
     .tlmm_cfg_value = 0x000000C4u,
 
     .gsbi_ctrl = 0x16400000u,
     .gsbi_protocol_value = 0x00000060u,
 
-    .clk_hclk_ctl = 0x00902A40u,
-    .clk_uart_md = 0x00902A50u,
-    .clk_uart_ns = 0x00902A54u,
-    .clk_reset = 0x00902A5Cu,
+    .clk_hclk_ctl = RM915_GSBI_HCLK_CTL(NOOS_RM915_GSBI_ID),
+    .clk_uart_md = RM915_GSBI_UART_MD(NOOS_RM915_GSBI_ID),
+    .clk_uart_ns = RM915_GSBI_UART_NS(NOOS_RM915_GSBI_ID),
+    .clk_reset = RM915_GSBI_RESET(NOOS_RM915_GSBI_ID),
 
     /*
      * 1.8432 MHz GSBI UART clock:
@@ -46,8 +85,8 @@ static const struct uartdm_full_init_plan g_full_plan = {
      *   MD16(3, 625) = 0x0003FD8E
      *   NS(...625,3,...d=1,...pll8 mux=3) = 0xFD910043
      */
-    .uart_md_value = 0x0003FD8Eu,
-    .uart_ns_value = 0xFD910043u,
+    .uart_md_value = RM915_UART_MD_VALUE,
+    .uart_ns_value = RM915_UART_NS_VALUE_1843200,
     .uart_target_hz = 1843200u,
     .uart_baud = 115200u,
 };
